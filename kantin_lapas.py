@@ -37,7 +37,6 @@ elif menu == "🛒 Pesan Barang":
         with st.form("order_form"):
             c1, c2 = st.columns(2)
             with c1:
-                # PASTIKAN BAGIAN INI MENJOROK KE DALAM
                 pemesan = st.text_input("Nama Keluarga")
                 untuk = st.text_input("Nama WBP")
                 wa = st.text_input("Nomor WhatsApp (Contoh: 08123...)")
@@ -86,58 +85,48 @@ elif menu == "👮 Area Petugas":
         st.warning("Masukkan password di sidebar.")
     else:
         st.title("Panel Petugas")
-        res_p = supabase.table("pesanan").select("*").neq("status", "Selesai").execute()
         
-        for p in res_p.data:
-            with st.expander(f"Order #{p['id']} - {p['untuk_siapa']}"):
-                st_baru = st.selectbox("Update Status", ["Menunggu Antrian", "Diproses", "Selesai"], key=f"s_{p['id']}")
-                foto = None
-                if st_baru == "Selesai":
-                    foto = st.camera_input("Foto Penyerahan", key=f"c_{p['id']}")
-                
-               # Dashboard Stok Singkat
-        with st.expander("📦 Monitor Stok"):
+        # Dashboard Stok
+        with st.expander("📦 Monitor Stok Kantin"):
             s_res = supabase.table("barang").select("nama_barang", "stok").execute()
             st.table(s_res.data)
 
-        # Daftar pesanan aktif (yang statusnya bukan 'Selesai')
+        # Ambil data pesanan yang belum selesai
         res_p = supabase.table("pesanan").select("*").neq("status", "Selesai").execute()
         
         if res_p.data:
             for p in res_p.data:
                 with st.expander(f"Order #{p['id']} - Untuk: {p['untuk_siapa']}"):
+                    st.write(f"Pemesan: {p['nama_pemesan']} ({p['nomor_wa']})")
                     st.write(f"Isi: {p['item_pesanan']}")
-                    st.write(f"Pembayaran: {p['cara_bayar']}")
                     
                     st_baru = st.selectbox("Update Status", ["Menunggu Antrian", "Diproses", "Selesai"], key=f"sel_{p['id']}")
                     
-                    # Jika status Selesai, minta foto
                     foto = None
                     if st_baru == "Selesai":
-                        foto = st.camera_input("Foto Bukti Penyerahan", key=f"cam_{p['id']}")
+                        foto = st.camera_input("Ambil Foto Bukti Penyerahan", key=f"cam_{p['id']}")
                     
                     if st.button("Simpan Perubahan", key=f"btn_{p['id']}"):
                         u_data = {"status": st_baru}
                         
-                        # Upload foto jika status selesai
+                        # Upload foto jika selesai
                         if foto and st_baru == "Selesai":
                             path = f"bukti_{p['id']}.png"
                             supabase.storage.from_("kantin-online").upload(path, foto.getvalue(), {"upsert": "true"})
                             u_data["foto_penerima"] = supabase.storage.from_("kantin-online").get_public_url(path)
                         
+                        # Update DB
                         supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
-                        st.rerun()
+                        
+                        # Tampilkan tombol WA jika selesai
+                        if st_baru == "Selesai":
+                            pesan_wa = f"Halo {p['nama_pemesan']}, pesanan #{p['id']} untuk {p['untuk_siapa']} TELAH DITERIMA petugas. Terima kasih."
+                            no_hp = p['nomor_wa']
+                            if no_hp.startswith('0'): no_hp = '62' + no_hp[1:]
+                            wa_url = f"https://wa.me/{no_hp}?text={pesan_wa.replace(' ', '%20')}"
+                            st.success("Data Tersimpan!")
+                            st.link_button("📲 Klik Untuk Kirim Notifikasi WA", wa_url)
+                        else:
+                            st.rerun()
         else:
-            st.write("Tidak ada antrian pesanan.")
-                    
-                    # LOGIKA WHATSAPP LINK (TANPA TOKEN)
-                    if st_baru == "Selesai":
-                        pesan_wa = f"Halo {p['nama_pemesan']}, pesanan #{p['id']} untuk {p['untuk_siapa']} TELAH DITERIMA petugas. Terima kasih."
-                        no_hp = p['nomor_wa']
-                        if no_hp.startswith('0'): no_hp = '62' + no_hp[1:]
-                        wa_url = f"https://wa.me/{no_hp}?text={pesan_wa.replace(' ', '%20')}"
-                        st.success("Status diperbarui!")
-                        st.link_button("📲 Klik Untuk Kirim WA", wa_url)
-                    else:
-                        st.rerun()
-
+            st.info("Belum ada antrian pesanan.")
