@@ -4,8 +4,8 @@ import uuid
 from datetime import datetime
 
 # --- KONFIGURASI SUPABASE ---
-URL = "https://gdvphhymxlhuarvxwvtm.supabase.co"
-KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkdnBoaHlteGxodWFydnh3dnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjU0MTEsImV4cCI6MjA4NDYwMTQxMX0.qOU1CIFxeZ64HJDmlaGX3yhr20kMn5Q8MJ2sy_b7__k"
+URL = st.secrets["https://gdvphhymxlhuarvxwvtm.supabase.co"]
+KEY = st.secrets["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkdnBoaHlteGxodWFydnh3dnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjU0MTEsImV4cCI6MjA4NDYwMTQxMX0.qOU1CIFxeZ64HJDmlaGX3yhr20kMn5Q8MJ2sy_b7__k"]
 supabase = create_client(URL, KEY)
 
 st.set_page_config(page_title="Kantin Online Lapas", layout="wide")
@@ -107,4 +107,5 @@ elif menu == "👮 Area Petugas":
         
         # --- (Sisanya adalah kode petugas Anda yang sebelumnya) ---
         res = supabase.table("pesanan").select("*").neq("status", "Selesai").execute()
+
         # ... kode tampilkan pesanan, update status, dan kamera ...
