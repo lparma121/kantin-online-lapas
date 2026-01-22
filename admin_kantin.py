@@ -123,4 +123,32 @@ if res_p.data:
                         if st_baru == "Selesai":
                             if foto:
                                 try:
-                                    path = f"
+                                    path = f"bukti_{p['id']}.png"
+                                    supabase.storage.from_("KANTIN-ASSETS").upload(path, foto.getvalue(), {"upsert": "true", "content-type": "image/png"})
+                                    u_data["foto_penerima"] = supabase.storage.from_("KANTIN-ASSETS").get_public_url(path)
+                                    
+                                    # Update Database
+                                    supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                                    sukses = True
+                                    
+                                    # Link WA
+                                    no_hp = p['nomor_wa']
+                                    if no_hp.startswith('0'): no_hp = '62' + no_hp[1:]
+                                    pesan_wa = f"Halo {p['nama_pemesan']}, pesanan #{p['id']} untuk {p['untuk_siapa']} SUDAH DISERAHKAN. Terima kasih."
+                                    wa_url = f"https://wa.me/{no_hp}?text={pesan_wa.replace(' ', '%20')}"
+                                    
+                                    st.success("✅ Pesanan Selesai!")
+                                    st.link_button("📲 Kirim WhatsApp", wa_url)
+                                except Exception as e:
+                                    st.error(f"Gagal upload foto: {e}")
+                            else:
+                                st.error("⚠️ Wajib ambil foto untuk menyelesaikan pesanan!")
+                        else:
+                            # Update status selain selesai
+                            supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                            st.success("Status diperbarui.")
+                            time.sleep(1)
+                            st.rerun()
+
+else:
+    st.info("✅ Tidak ada antrian pesanan saat ini.")
