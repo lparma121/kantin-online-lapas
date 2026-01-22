@@ -82,3 +82,37 @@ elif menu == "🔍 Lacak Pesanan":
         if res_l.data:
             p = res_l.data[0]
             st
+# --- 6. HALAMAN PETUGAS ---
+elif menu == "👮 Area Petugas":
+    if not authenticated:
+        st.warning("Silakan login di sidebar.")
+    else:
+        st.title("Panel Petugas")
+        # Tampilkan stok saat ini
+        with st.expander("📦 Lihat Stok Kantin"):
+            stok_res = supabase.table("barang").select("nama_barang", "stok").execute()
+            st.table(stok_res.data)
+
+        # Proses pesanan yang belum selesai
+        res_p = supabase.table("pesanan").select("*").neq("status", "Selesai").execute()
+        if res_p.data:
+            for p in res_p.data:
+                with st.expander(f"Pesanan #{p['id']} - {p['untuk_siapa']}"):
+                    st.write(f"Barang: {p['item_pesanan']}")
+                    status_baru = st.selectbox("Update Status", ["Menunggu Antrian", "Diproses", "Selesai"], key=f"s_{p['id']}")
+                    
+                    foto_file = None
+                    if status_baru == "Selesai":
+                        foto_file = st.camera_input("Ambil Foto Penerima", key=f"c_{p['id']}")
+                    
+                    if st.button("Update", key=f"b_{p['id']}"):
+                        up_data = {"status": status_baru}
+                        if foto_file and status_baru == "Selesai":
+                            f_name = f"bukti_{p['id']}.png"
+                            supabase.storage.from_("kantin-online").upload(f_name, foto_file.getvalue(), {"upsert": "true"})
+                            up_data["foto_penerima"] = supabase.storage.from_("kantin-online").get_public_url(f_name)
+                        
+                        supabase.table("pesanan").update(up_data).eq("id", p['id']).execute()
+                        st.rerun()
+        else:
+            st.info("Belum ada antrian pesanan.")
