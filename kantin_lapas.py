@@ -1,38 +1,31 @@
 import streamlit as st
 from supabase import create_client
-import uuid
 
-# --- 1. KONEKSI DATABASE ---
+# --- KONEKSI DATABASE ---
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
 st.set_page_config(page_title="Kantin Online Lapas", layout="wide")
 
-# --- 2. NAVIGASI ---
-st.sidebar.title("🍱 Menu Utama")
-menu = st.sidebar.radio("Pilih Halaman:", ["🏠 Beranda", "🛒 Pesan Barang", "🔍 Lacak Pesanan", "👮 Area Petugas"])
+# --- NAVIGASI ---
+st.sidebar.title("🍱 Menu Keluarga")
+menu = st.sidebar.radio("Pilih Layanan:", ["🏠 Beranda", "🛒 Pesan Barang", "🔍 Lacak Pesanan"])
 
-authenticated = False
-if menu == "👮 Area Petugas":
-    st.sidebar.markdown("---")
-    pwd = st.sidebar.text_input("Password Petugas", type="password")
-    if pwd == "admin123":
-        authenticated = True
-
-# --- 3. HALAMAN BERANDA ---
+# --- HALAMAN BERANDA ---
 if menu == "🏠 Beranda":
     st.title("🍱 Kantin Online Lapas")
-    st.write("Layanan digital terpadu untuk pemesanan kebutuhan WBP.")
+    st.write("Layanan pemesanan kebutuhan WBP secara praktis dan transparan.")
+    st.info("Pilih menu di samping untuk mulai memesan.")
 
-# --- 4. HALAMAN PESAN BARANG ---
+# --- HALAMAN PESAN BARANG ---
 elif menu == "🛒 Pesan Barang":
     st.title("Formulir Pesanan")
     res_b = supabase.table("barang").select("*").gt("stok", 0).execute()
     daftar_barang = res_b.data
     
     if not daftar_barang:
-        st.warning("Stok barang sedang kosong.")
+        st.warning("Maaf, stok barang sedang kosong.")
     else:
         with st.form("order_form"):
             c1, c2 = st.columns(2)
@@ -62,19 +55,19 @@ elif menu == "🛒 Pesan Barang":
                             stok_baru = curr.data[0]['stok'] - 1
                             supabase.table("barang").update({"stok": stok_baru}).eq("nama_barang", item).execute()
                     
-                    st.success(f"✅ Berhasil! ID Pesanan: #{id_p}")
+                    st.success(f"✅ Berhasil! Nomor Pesanan: #{id_p}")
                 else:
-                    st.error("Mohon lengkapi semua data.")
+                    st.error("Lengkapi semua data.")
 
-# --- 5. HALAMAN LACAK ---
+# --- HALAMAN LACAK ---
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
     id_cari = st.number_input("ID Pesanan", min_value=1, step=1)
-    if st.button("Cek"):
+    if st.button("Cek Status"):
         res = supabase.table("pesanan").select("*").eq("id", id_cari).execute()
         if res.data:
-            st.info(f"Status: {res.data[0]['status']}")
+            st.info(f"Status: **{res.data[0]['status']}**")
             if res.data[0]['foto_penerima']:
-                st.image(res.data[0]['foto_penerima'])
+                st.image(res.data[0]['foto_penerima'], caption="Bukti Penyerahan")
         else:
-            st.error("Data tidak ditemukan.")
+            st.error("ID Pesanan tidak ditemukan.")
