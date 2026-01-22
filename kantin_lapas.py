@@ -45,9 +45,10 @@ if menu == "🏠 Beranda":
 elif menu == "🛒 Pesan Barang":
     st.title("Formulir Pesanan Keluarga")
     
-    # Ambil daftar barang dari database
-    daftar_barang = get_data_barang()
-
+    # Ambil daftar barang yang stoknya > 0
+    res_barang = supabase.table("barang").select("*").gt("stok", 0).execute()
+    daftar_barang = res_barang.data
+    
     with st.form("form_order"):
         col1, col2 = st.columns(2)
         with col1:
@@ -57,21 +58,34 @@ elif menu == "🛒 Pesan Barang":
             cara_bayar = st.selectbox("Metode Pembayaran", ["Transfer Bank", "E-Wallet", "Tunai di Loket"])
             pilihan = st.multiselect("Pilih Barang", [b['nama_barang'] for b in daftar_barang])
         
-        catatan = st.text_area("Catatan Tambahan")
         submitted = st.form_submit_button("Kirim Pesanan Sekarang")
         
+        # BARIS DI BAWAH INI HARUS MENJOROK KE DALAM (Indented)
         if submitted:
-    if nama_pemesan and untuk_siapa and pilihan:
-        # 1. Simpan Data Pesanan
-        data_pesan = {
-            "nama_pemesan": nama_pemesan,
-            "untuk_siapa": untuk_siapa,
-            "item_pesanan": ", ".join(pilihan),
-            "cara_bayar": cara_bayar,
-            "status": "Menunggu Antrian"
-        }
-        res = supabase.table("pesanan").insert(data_pesan).execute()
-        id_baru = res.data[0]['id']
+            if nama_pemesan and untuk_siapa and pilihan:
+                # 1. Simpan Data Pesanan
+                data_pesan = {
+                    "nama_pemesan": nama_pemesan,
+                    "untuk_siapa": untuk_siapa,
+                    "item_pesanan": ", ".join(pilihan),
+                    "cara_bayar": cara_bayar,
+                    "status": "Menunggu Antrian"
+                }
+                res = supabase.table("pesanan").insert(data_pesan).execute()
+                id_baru = res.data[0]['id']
+
+                # 2. LOGIKA STOK OTOMATIS
+                for item in pilihan:
+                    # Ambil stok saat ini dari database
+                    barang_data = supabase.table("barang").select("stok").eq("nama_barang", item).execute()
+                    if barang_data.data:
+                        stok_sekarang = barang_data.data[0]['stok']
+                        # Kurangi stok 1
+                        supabase.table("barang").update({"stok": stok_sekarang - 1}).eq("nama_barang", item).execute()
+                
+                st.success(f"✅ Pesanan Berhasil! Nomor Pesanan Anda: #{id_baru}")
+            else:
+                st.error("Mohon lengkapi semua data dan pilih minimal satu barang.")
 
         # 2. LOGIKA STOK OTOMATIS
         for item in pilihan:
@@ -133,5 +147,6 @@ elif menu == "👮 Area Petugas":
         res = supabase.table("pesanan").select("*").neq("status", "Selesai").execute()
 
         # ... kode tampilkan pesanan, update status, dan kamera ...
+
 
 
