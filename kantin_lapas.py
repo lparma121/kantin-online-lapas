@@ -95,14 +95,40 @@ elif menu == "👮 Area Petugas":
                 if st_baru == "Selesai":
                     foto = st.camera_input("Foto Penyerahan", key=f"c_{p['id']}")
                 
-                if st.button("Simpan Perubahan", key=f"b_{p['id']}"):
-                    u_data = {"status": st_baru}
-                    if foto and st_baru == "Selesai":
-                        path = f"bukti_{p['id']}.png"
-                        supabase.storage.from_("kantin-online").upload(path, foto.getvalue(), {"upsert": "true"})
-                        u_data["foto_penerima"] = supabase.storage.from_("kantin-online").get_public_url(path)
+               # Dashboard Stok Singkat
+        with st.expander("📦 Monitor Stok"):
+            s_res = supabase.table("barang").select("nama_barang", "stok").execute()
+            st.table(s_res.data)
+
+        # Daftar pesanan aktif (yang statusnya bukan 'Selesai')
+        res_p = supabase.table("pesanan").select("*").neq("status", "Selesai").execute()
+        
+        if res_p.data:
+            for p in res_p.data:
+                with st.expander(f"Order #{p['id']} - Untuk: {p['untuk_siapa']}"):
+                    st.write(f"Isi: {p['item_pesanan']}")
+                    st.write(f"Pembayaran: {p['cara_bayar']}")
                     
-                    supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                    st_baru = st.selectbox("Update Status", ["Menunggu Antrian", "Diproses", "Selesai"], key=f"sel_{p['id']}")
+                    
+                    # Jika status Selesai, minta foto
+                    foto = None
+                    if st_baru == "Selesai":
+                        foto = st.camera_input("Foto Bukti Penyerahan", key=f"cam_{p['id']}")
+                    
+                    if st.button("Simpan Perubahan", key=f"btn_{p['id']}"):
+                        u_data = {"status": st_baru}
+                        
+                        # Upload foto jika status selesai
+                        if foto and st_baru == "Selesai":
+                            path = f"bukti_{p['id']}.png"
+                            supabase.storage.from_("kantin-online").upload(path, foto.getvalue(), {"upsert": "true"})
+                            u_data["foto_penerima"] = supabase.storage.from_("kantin-online").get_public_url(path)
+                        
+                        supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                        st.rerun()
+        else:
+            st.write("Tidak ada antrian pesanan.")
                     
                     # LOGIKA WHATSAPP LINK (TANPA TOKEN)
                     if st_baru == "Selesai":
@@ -114,3 +140,4 @@ elif menu == "👮 Area Petugas":
                         st.link_button("📲 Klik Untuk Kirim WA", wa_url)
                     else:
                         st.rerun()
+
