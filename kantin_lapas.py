@@ -106,8 +106,8 @@ elif menu == "👮 Area Petugas":
                             if st_baru == "Selesai" and foto is not None:
                                 path = f"bukti_{p['id']}.png"
                                 # Proses unggah ke storage
-                                supabase.storage.from_("kantin-online").upload(path, foto.getvalue(), {"upsert": "true"})
-                                u_data["foto_penerima"] = supabase.storage.from_("kantin-online").get_public_url(path)
+                                supabase.storage.from_("kantin-assets").upload(path, foto.getvalue(), {"upsert": "true"})
+                                u_data["foto_penerima"] = supabase.storage.from_("kantin-assets").get_public_url(path)
                                 
                                 # Simpan perubahan ke database
                                 supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
@@ -128,3 +128,4 @@ elif menu == "👮 Area Petugas":
                                 st.rerun()
         else:
             st.info("Belum ada antrian pesanan.")
+
