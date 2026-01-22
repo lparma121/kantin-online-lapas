@@ -8,7 +8,7 @@ KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
 st.set_page_config(page_title="Kantin Online Lapas", layout="wide")
-
+        
 # --- 2. NAVIGASI SIDEBAR & PROTEKSI ---
 st.sidebar.title("🍱 Menu Utama")
 menu = st.sidebar.radio("Pilih Halaman:", ["🏠 Beranda", "🛒 Pesan Barang", "🔍 Lacak Pesanan", "👮 Area Petugas"])
@@ -41,8 +41,9 @@ elif menu == "🛒 Pesan Barang":
         with st.form("order_form"):
             c1, c2 = st.columns(2)
             with c1:
-                pemesan = st.text_input("Nama Keluarga")
-                untuk = st.text_input("Nama WBP (Penerima)")
+    pemesan = st.text_input("Nama Keluarga")
+    untuk = st.text_input("Nama WBP (Penerima)")
+    no_wa = st.text_input("Nomor WhatsApp (Contoh: 0812345678)", help="Untuk notifikasi status pesanan")
             with c2:
                 bayar = st.selectbox("Metode Bayar", ["Transfer", "E-Wallet", "Tunai"])
                 pilihan = st.multiselect("Pilih Barang", [b['nama_barang'] for b in daftar_barang])
@@ -105,14 +106,30 @@ elif menu == "👮 Area Petugas":
                     if status_baru == "Selesai":
                         foto_file = st.camera_input("Ambil Foto Penerima", key=f"c_{p['id']}")
                     
-                    if st.button("Update", key=f"b_{p['id']}"):
-                        up_data = {"status": status_baru}
-                        if foto_file and status_baru == "Selesai":
-                            f_name = f"bukti_{p['id']}.png"
-                            supabase.storage.from_("kantin-online").upload(f_name, foto_file.getvalue(), {"upsert": "true"})
-                            up_data["foto_penerima"] = supabase.storage.from_("kantin-online").get_public_url(f_name)
-                        
-                        supabase.table("pesanan").update(up_data).eq("id", p['id']).execute()
-                        st.rerun()
+                    if st.button("Simpan & Siapkan Pesan", key=f"b_{p['id']}"):
+    u_data = {"status": st_baru}
+    
+    # ... (kode upload foto tetap sama) ...
+    
+    # Simpan perubahan status ke database dulu
+    supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+    
+    # Jika status selesai, tampilkan tombol link WhatsApp
+    if st_baru == "Selesai":
+        pesan_teks = f"Halo {p['nama_pemesan']}, pesanan #{p['id']} untuk {p['untuk_siapa']} telah DITERIMA petugas. Terima kasih."
+        
+        # Format link WhatsApp (Tanpa Token)
+        # Menghapus angka 0 di depan dan diganti 62
+        no_hp = p['nomor_wa']
+        if no_hp.startswith('0'):
+            no_hp = '62' + no_hp[1:]
+            
+        wa_url = f"https://wa.me/{no_hp}?text={pesan_teks.replace(' ', '%20')}"
+        
+        st.success("Status berhasil diperbarui!")
+        st.link_button("📲 Kirim Notifikasi via WA", wa_url)
+    else:
+        st.rerun()
         else:
             st.info("Belum ada antrian pesanan.")
+
