@@ -96,4 +96,21 @@ elif menu == "👮 Area Petugas":
                     foto = st.camera_input("Foto Penyerahan", key=f"c_{p['id']}")
                 
                 if st.button("Simpan Perubahan", key=f"b_{p['id']}"):
-                    u_data = {"status
+                    u_data = {"status": st_baru}
+                    if foto and st_baru == "Selesai":
+                        path = f"bukti_{p['id']}.png"
+                        supabase.storage.from_("kantin-online").upload(path, foto.getvalue(), {"upsert": "true"})
+                        u_data["foto_penerima"] = supabase.storage.from_("kantin-online").get_public_url(path)
+                    
+                    supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                    
+                    # LOGIKA WHATSAPP LINK (TANPA TOKEN)
+                    if st_baru == "Selesai":
+                        pesan_wa = f"Halo {p['nama_pemesan']}, pesanan #{p['id']} untuk {p['untuk_siapa']} TELAH DITERIMA petugas. Terima kasih."
+                        no_hp = p['nomor_wa']
+                        if no_hp.startswith('0'): no_hp = '62' + no_hp[1:]
+                        wa_url = f"https://wa.me/{no_hp}?text={pesan_wa.replace(' ', '%20')}"
+                        st.success("Status diperbarui!")
+                        st.link_button("📲 Klik Untuk Kirim WA", wa_url)
+                    else:
+                        st.rerun()
