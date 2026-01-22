@@ -10,6 +10,7 @@ st.set_page_config(page_title="Kantin Online Lapas", layout="wide")
 
 # --- NAVIGASI ---
 st.sidebar.title("🍱 Menu Keluarga")
+menu = st.sidebar.radio("Pilih Layanan:", ["🏠 Beranda", "🛒 Pesan Barang", "🔍 Lacak Pesanan"])
 
 # --- HALAMAN BERANDA ---
 if menu == "🏠 Beranda":
@@ -70,4 +71,3 @@ elif menu == "🔍 Lacak Pesanan":
                 st.image(res.data[0]['foto_penerima'], caption="Bukti Penyerahan")
         else:
             st.error("ID Pesanan tidak ditemukan.")
-
