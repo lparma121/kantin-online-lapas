@@ -491,6 +491,7 @@ elif menu == "🔍 Lacak Pesanan":
                 Dana dari pesanan yang dibatalkan akan otomatis dialihkan menjadi **Saldo Titipan WBP**. 
                 Saldo ini dapat digunakan WBP untuk belanja langsung di kantin.
                 \nJika ingin uang kembali ke rekening, silakan hubungi Admin via WhatsApp.
+                \n-0812-3456-7890-
                 """)
                 # ===================================================
 
@@ -526,6 +527,7 @@ elif menu == "🔍 Lacak Pesanan":
                         
                     except Exception as e:
                         st.error(f"Gagal membatalkan. Error: {e}")
+
 
 
 
