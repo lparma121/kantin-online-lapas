@@ -80,7 +80,7 @@ if menu == "🏠 Beranda":
     # Banner Gambar (Gunakan URL gambar pemandangan/kantin yang bagus)
     st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
     
-    st.title("Selamat Datang di Kantin Online Lapas")
+    st.title("Selamat Datang di Kantin Online Lapas Arga Makmur")
     st.markdown("### *Aman, Cepat, dan Transparan.*")
     
     col1, col2, col3 = st.columns(3)
@@ -214,3 +214,4 @@ elif menu == "🔍 Lacak Pesanan":
                  st.success("Pesanan telah selesai (Menunggu upload foto).")
         else:
             st.error("❌ Data tidak ditemukan. Cek kembali nomor ID Anda.")
+
