@@ -49,47 +49,68 @@ def generate_resi():
     acak = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
     return f"KANTIN-{tanggal}-{acak}"
 
-# --- FUNGSI MEMBUAT GAMBAR NOTA ---
+# --- FUNGSI MEMBUAT GAMBAR NOTA (YANG SUDAH ADA) ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
-    width, height = 500, 700
-    img = Image.new('RGB', (width, height), color='white')
+    # ... (kode lama Anda di sini) ...
+    # ...
+    # img.save(buf, format='JPEG', quality=90)
+    return buf.getvalue()
+
+# =======================================================
+# 👇 COPY DAN TEMPEL KODE INI TEPAT DI BAWAH KODE DI ATAS
+# =======================================================
+
+# --- FUNGSI MEMBUAT VOUCHER REFUND ---
+def buat_voucher_image(nama, nominal, resi_asal):
+    width, height = 600, 300
+    # Latar belakang biru muda (kode hex #f0f8ff) agar beda dengan nota biasa
+    img = Image.new('RGB', (width, height), color='#f0f8ff') 
     d = ImageDraw.Draw(img)
-    try: font_header = ImageFont.load_default() 
-    except: pass
     
-    black = (0, 0, 0)
-    gray = (100, 100, 100)
+    # Load Font (Antisipasi jika font tidak ada di server)
+    try: 
+        font_judul = ImageFont.truetype("arial.ttf", 36)
+        font_tek = ImageFont.truetype("arial.ttf", 18)
+        font_nominal = ImageFont.truetype("arial.ttf", 40)
+        font_kode = ImageFont.truetype("arial.ttf", 24)
+    except: 
+        # Fallback ke font default jika error
+        font_judul = ImageFont.load_default()
+        font_tek = ImageFont.load_default()
+        font_nominal = ImageFont.load_default()
+        font_kode = ImageFont.load_default()
     
-    d.text((160, 20), "KANTIN LAPAS ONLINE", fill=black)
-    d.text((150, 40), "Bukti Transaksi Resmi", fill=gray)
-    d.line((20, 70, 480, 70), fill=black, width=2)
+    # Warna-warna
+    biru_tua = (0, 85, 255)
+    hitam = (0, 0, 0)
+    merah = (220, 20, 60)
+    abu = (100, 100, 100)
+
+    # Garis Tepi (Border) Tebal warna Biru
+    d.rectangle([(10, 10), (width-10, height-10)], outline=biru_tua, width=5)
     
-    y = 90
-    d.text((30, y), f"NO. RESI  : {resi}", fill=black); y+=25
-    d.text((30, y), f"TANGGAL   : {time.strftime('%d-%m-%Y %H:%M')}", fill=black); y+=25
-    d.text((30, y), f"PENGIRIM  : {data_pesanan['nama_pemesan']}", fill=black); y+=25
-    d.text((30, y), f"PENERIMA  : {data_pesanan['untuk_siapa']}", fill=black); y+=25
-    d.line((20, y+10, 480, y+10), fill=gray, width=1)
-    y += 30
+    # Header Voucher
+    d.text((40, 30), "VOUCHER PENGEMBALIAN DANA", fill=biru_tua, font=font_judul)
+    d.text((40, 75), "e-PAS Mart Lapas Arga Makmur", fill=abu, font=font_tek)
+    d.line((40, 100, 560, 100), fill=abu, width=1)
     
-    d.text((30, y), "ITEM PESANAN:", fill=black); y+=25
-    for item in list_keranjang:
-        nama = item['nama'][:30]
-        harga = format_rupiah(item['harga'])
-        d.text((30, y), f"- {nama}", fill=black)
-        d.text((350, y), harga, fill=black)
-        y += 25
-        
-    d.line((20, y+10, 480, y+10), fill=black, width=2)
-    y += 30
+    # Isi Data
+    d.text((40, 120), "Diberikan Kepada:", fill=hitam, font=font_tek)
+    d.text((40, 145), nama, fill=hitam, font=font_kode) # Nama User
     
-    d.text((30, y), "TOTAL BAYAR", fill=black)
-    d.text((350, y), format_rupiah(total_bayar), fill=(200, 0, 0))
-    y += 50
-    d.text((120, y), "TERIMA KASIH ATAS KUNJUNGAN ANDA", fill=gray)
+    d.text((300, 120), "Senilai:", fill=hitam, font=font_tek)
+    d.text((300, 145), format_rupiah(nominal), fill=merah, font=font_nominal) # Nominal Besar
+    
+    # Footer & Kode Unik
+    d.text((40, 220), "*Gunakan gambar ini sebagai bukti bayar pesanan berikutnya.", fill=abu, font=font_tek)
+    
+    # Kode Resi Asal di Pojok Kanan Bawah
+    kode_unik = f"REF-{resi_asal}"
+    d.rectangle([(380, 210), (580, 250)], fill=biru_tua) # Kotak background kode
+    d.text((400, 220), kode_unik, fill="white", font=font_tek) # Teks kode putih
     
     buf = io.BytesIO()
-    img.save(buf, format='JPEG', quality=90)
+    img.save(buf, format='JPEG', quality=95)
     return buf.getvalue()
 
 # --- FUNGSI UPLOAD ---
@@ -480,53 +501,74 @@ elif menu == "🔍 Lacak Pesanan":
                 st.divider()
                 st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             
-            # --- FITUR BATALKAN PESANAN ---
+            # --- FITUR BATALKAN PESANAN (DENGAN VOUCHER) ---
             if d['status'] == "Menunggu Verifikasi":
                 st.divider()
                 st.warning("⚠️ Pesanan ini belum diproses admin. Anda dapat membatalkannya.")
                 
-                # === TAMBAHAN INFO DANA DI SINI (Sebelum Tombol) ===
                 st.info("""
-                ℹ️ **Info Pengembalian Dana:**
-                Dana dari pesanan yang dibatalkan akan otomatis dialihkan menjadi **Saldo Titipan WBP**. 
-                Saldo ini dapat digunakan WBP untuk belanja langsung di kantin.
-                \nJika ingin uang kembali ke rekening, silakan hubungi Admin via WhatsApp.
-                \n-0812-3456-7890-
+                ℹ️ **Kebijakan Pembatalan:**
+                Sistem akan otomatis membuatkan **VOUCHER SALDO** senilai pesanan Anda.
+                Simpan gambar Voucher tersebut dan upload sebagai pengganti bukti transfer pada pesanan berikutnya.
                 """)
-                # ===================================================
-
-                # Gunakan key unik agar tidak bentrok
-                if st.button("❌ Batalkan Pesanan Ini", type="primary", key="btn_batal"):
+                
+                if st.button("❌ Batalkan & Buat Voucher", type="primary", key="btn_batal"):
                     try:
-                        # 1. Kembalikan Stok Barang
-                        if d.get('item_pesanan'):
-                            items_list = d['item_pesanan'].split(", ")
-                            for item_str in items_list:
-                                # Parsing format "2x Nasi Goreng"
-                                parts = item_str.split("x ", 1)
-                                if len(parts) == 2:
-                                    qty_batal = int(parts[0])
-                                    nama_batal = parts[1]
-                                    
-                                    # Ambil stok sekarang
-                                    curr = supabase.table("barang").select("stok").eq("nama_barang", nama_batal).execute()
-                                    if curr.data:
-                                        stok_skrg = curr.data[0]['stok']
-                                        # Update stok (+ qty_batal)
-                                        supabase.table("barang").update({"stok": stok_skrg + qty_batal}).eq("nama_barang", nama_batal).execute()
+                        # 1. Hitung Nominal Refund (Total Harga Barang)
+                        # Kita harus hitung ulang dari string item_pesanan karena di DB tidak simpan total angka
+                        # Atau ambil dari hitungan kasar manual (agak riskan), tapi untuk amannya:
+                        # Kita asumsikan Admin akan cek manual nominalnya, atau kita parse stringnya.
+                        # Agar cepat, kita biarkan Nominal tertulis "Sesuai Pesanan" atau parsing sederhana jika data harga ada.
+                        # TAPI, karena tabel pesanan tidak simpan total harga, kita tulis saja kode resi-nya.
+                        # Admin nanti cek resi itu totalnya berapa.
                         
+                        # (Opsional) Logika Parsing Total Harga (Agar voucher ada angkanya)
+                        total_refund = 0
+                        items_list = d['item_pesanan'].split(", ")
+                        for item_str in items_list:
+                            parts = item_str.split("x ", 1)
+                            if len(parts) == 2:
+                                qty_batal = int(parts[0])
+                                nama_batal = parts[1]
+                                
+                                # Ambil harga & stok utk dikembalikan
+                                curr = supabase.table("barang").select("stok", "harga").eq("nama_barang", nama_batal).execute()
+                                if curr.data:
+                                    dt_brg = curr.data[0]
+                                    # Kembalikan Stok
+                                    supabase.table("barang").update({"stok": dt_brg['stok'] + qty_batal}).eq("nama_barang", nama_batal).execute()
+                                    # Hitung Refund
+                                    total_refund += (dt_brg['harga'] * qty_batal)
+
                         # 2. Update Status jadi 'Dibatalkan'
                         supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
                         
-                        st.success("✅ Pesanan berhasil dibatalkan. Stok barang telah dikembalikan.")
+                        # 3. BUAT VOUCHER IMAGE
+                        gambar_voucher = buat_voucher_image(d['nama_pemesan'], total_refund, d['no_resi'])
                         
-                        # Hapus session state agar tampilan kereset
-                        del st.session_state['resi_aktif']
-                        time.sleep(2)
-                        st.rerun()
+                        # 4. Tampilkan Sukses & Voucher
+                        st.balloons()
+                        st.success("✅ Pesanan Dibatalkan! Stok dikembalikan.")
+                        
+                        st.markdown("### 🎫 VOUCHER ANDA (PENTING!)")
+                        st.image(gambar_voucher, caption="Voucher Pengganti Uang", width=400)
+                        st.warning("👇 **SILAKAN DOWNLOAD GAMBAR DI BAWAH INI** 👇")
+                        st.write("Gunakan gambar ini nanti di kolom **'Upload Bukti Transfer'** saat Anda memesan lagi.")
+                        
+                        # Tombol Download
+                        nama_file_v = f"VOUCHER_{d['no_resi']}.jpg"
+                        st.download_button("📥 Download Voucher (JPG)", data=gambar_voucher, file_name=nama_file_v, mime="image/jpeg")
+                        
+                        # Hapus session state
+                        if 'resi_aktif' in st.session_state:
+                            del st.session_state['resi_aktif']
+                        
+                        # JANGAN RERUN LANGSUNG, BIAR USER DOWNLOAD DULU
+                        st.stop() 
                         
                     except Exception as e:
                         st.error(f"Gagal membatalkan. Error: {e}")
+
 
 
 
