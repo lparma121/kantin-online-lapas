@@ -302,31 +302,31 @@ elif menu_admin == "📋 Daftar Pesanan":
             else:
                 st.info("Belum ada riwayat selesai.")
 
-        # TAB 4: RIWAYAT PEMBATALAN (FITUR BARU)
+       # TAB 4: RIWAYAT PEMBATALAN (FITUR BARU)
         with tab4:
             st.header("❌ Pesanan Dibatalkan")
             st.info("Halaman ini untuk mengecek pesanan yang dibatalkan guna keperluan **Pengembalian Dana (Refund)** atau **Pencatatan Saldo**.")
             
-            # Ambil data yang statusnya 'Dibatalkan'
-            res_batal = supabase.table("pesanan").select("*").eq("status", "Dibatalkan").order("created_at", desc=True).execute()
+            # PERBAIKAN DISINI: Ganti 'created_at' menjadi 'id'
+            res_batal = supabase.table("pesanan").select("*").eq("status", "Dibatalkan").order("id", desc=True).execute()
             items = res_batal.data
 
             if not items:
                 st.write("Belum ada data pembatalan.")
             else:
                 for d in items:
-                    with st.expander(f"🚫 {d['nama_pemesan']} ➝ {d['untuk_siapa']} | Resi: {d['no_resi']}"):
+                    with st.expander(f"🚫 {d['nama_pemesan']} ➝ {d['untuk_siapa']} | Resi: {d.get('no_resi', '-')}"):
                         c1, c2 = st.columns(2)
                         
                         with c1:
                             st.write("**Realisasi Item:**")
                             st.code(d['item_pesanan'])
-                            st.caption(f"No WA: {d['nomor_wa']}")
-                            st.caption(f"Metode: {d['cara_bayar']}")
+                            st.caption(f"No WA: {d.get('nomor_wa', '-')}")
+                            st.caption(f"Metode: {d.get('cara_bayar', '-')}")
                         
                         with c2:
                             st.write("**Bukti Transfer Awal:**")
-                            if d['bukti_transfer']:
+                            if d.get('bukti_transfer'):
                                 st.image(d['bukti_transfer'], width=200)
                             else:
                                 st.warning("Tidak ada bukti transfer")
