@@ -302,50 +302,55 @@ elif menu_admin == "📋 Daftar Pesanan":
             else:
                 st.info("Belum ada riwayat selesai.")
 
-       # TAB 4: RIWAYAT PEMBATALAN (FITUR BARU)
+       # TAB 4: RIWAYAT PEMBATALAN & CEK VOUCHER
         with tab4:
-            st.header("❌ Pesanan Dibatalkan")
-            st.info("Halaman ini untuk mengecek pesanan yang dibatalkan guna keperluan **Pengembalian Dana (Refund)** atau **Pencatatan Saldo**.")
+            st.header("🎫 Cek Validitas Voucher")
             
-            # PERBAIKAN DISINI: Ganti 'created_at' menjadi 'id'
-            res_batal = supabase.table("pesanan").select("*").eq("status", "Dibatalkan").order("id", desc=True).execute()
+            # FITUR PENCARIAN KHUSUS VOUCHER
+            cek_kode = st.text_input("🔍 Masukkan Kode Resi Voucher (Contoh: KANTIN-1234-ABCD)")
+            
+            # TAMPILAN DATA (Filter otomatis jika ada pencarian)
+            query = supabase.table("pesanan").select("*").in_("status", ["Dibatalkan", "Voucher Sudah Dipakai"]).order("id", desc=True)
+            
+            if cek_kode:
+                # Cari spesifik (menghapus awalan REF- jika admin mengetiknya)
+                bersih_kode = cek_kode.replace("REF-", "").strip()
+                query = query.eq("no_resi", bersih_kode)
+            
+            res_batal = query.execute()
             items = res_batal.data
 
             if not items:
-                st.write("Belum ada data pembatalan.")
+                st.info("Belum ada data voucher/pembatalan.")
             else:
                 for d in items:
-                    with st.expander(f"🚫 {d['nama_pemesan']} ➝ {d['untuk_siapa']} | Resi: {d.get('no_resi', '-')}"):
-                        c1, c2 = st.columns(2)
+                    # TANDA VISUAL STATUS VOUCHER
+                    icon = "✅" if d['status'] == "Dibatalkan" else "❌"
+                    status_text = "VOUCHER AKTIF (Bisa Dipakai)" if d['status'] == "Dibatalkan" else "SUDAH TERPAKAI"
+                    warna_border = "green" if d['status'] == "Dibatalkan" else "red"
+                    
+                    with st.container(border=True):
+                        st.markdown(f"### {icon} {d['no_resi']}")
+                        st.write(f"**Status Voucher:** :{warna_border}[{status_text}]")
+                        st.write(f"**Pemilik:** {d['nama_pemesan']} ({d['untuk_siapa']})")
                         
-                        with c1:
-                            st.write("**Realisasi Item:**")
-                            st.code(d['item_pesanan'])
-                            st.caption(f"No WA: {d.get('nomor_wa', '-')}")
-                            st.caption(f"Metode: {d.get('cara_bayar', '-')}")
+                        # Tampilkan Nominal Asli dari Database (Anti-Edit Photoshop)
+                        # (Kita estimasi nominal dari item_pesanan atau admin cek manual)
+                        st.code(f"Item Asli: {d['item_pesanan']}")
                         
-                        with c2:
-                            st.write("**Bukti Transfer Awal:**")
-                            if d.get('bukti_transfer'):
-                                st.image(d['bukti_transfer'], width=200)
-                            else:
-                                st.warning("Tidak ada bukti transfer")
-
                         st.divider()
                         
-                        # --- OPSI TINDAKAN ADMIN ---
-                        st.write("**Tindakan Admin:**")
-                        col_act1, col_act2 = st.columns(2)
-                        
-                        with col_act1:
-                            # Tombol Hapus Permanen
-                            if st.button("🗑️ Hapus Data Arsip", key=f"del_{d['id']}"):
-                                supabase.table("pesanan").delete().eq("id", d['id']).execute()
-                                st.success("Data berhasil dihapus dari arsip.")
-                                time.sleep(1)
-                                st.rerun()
-                        
-                        with col_act2:
-                            # Tombol Info Refund
-                            if st.button("💰 Tandai Sudah Refund/Saldo", key=f"ref_{d['id']}"):
-                                st.toast("✅ Silakan catat manual di buku kas bahwa dana ini sudah dikembalikan/jadi saldo.", icon="📒")
+                        # TOMBOL AKSI (HANYA MUNCUL JIKA BELUM DIPAKAI)
+                        if d['status'] == "Dibatalkan":
+                            c1, c2 = st.columns([3, 1])
+                            with c1:
+                                st.info("Klik tombol di kanan jika user menggunakan voucher ini untuk belanja baru ➔")
+                            with c2:
+                                if st.button("Tandai Terpakai", key=f"claim_{d['id']}", type="primary"):
+                                    # UPDATE STATUS AGAR TIDAK BISA DIPAKAI LAGI
+                                    supabase.table("pesanan").update({"status": "Voucher Sudah Dipakai"}).eq("id", d['id']).execute()
+                                    st.success("Voucher berhasil diklaim!")
+                                    time.sleep(1)
+                                    st.rerun()
+                        else:
+                            st.warning(f"⚠️ Voucher ini sudah digunakan pada tanggal: {d.get('created_at', '-')[:10]}")
