@@ -38,7 +38,7 @@ def format_rupiah(angka):
 def generate_resi():
     tanggal = time.strftime("%d%m")
     acak = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-    return f"KANTIN-{tanggal}-{acak}"
+    return f"e-PAS MART-{tanggal}-{acak}"
 
 # --- FUNGSI MEMBUAT GAMBAR NOTA ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
@@ -175,9 +175,24 @@ elif menu == "🛍️ Pesan Barang":
                         st.image(img, use_container_width=True)
                         st.write(f"**{item['nama_barang']}**")
                         st.caption(f"{format_rupiah(item['harga'])} | Stok: {item['stok']}")
-                        if st.button("➕ Beli", key=f"b_{item['id']}"):
-                            tambah_ke_keranjang(item['nama_barang'], item['harga'])
-                            st.rerun()
+                        
+                        # --- UPDATE: KOLOM UNTUK JUMLAH & TOMBOL ---
+                        c_qty, c_btn = st.columns([1.5, 2])
+                        with c_qty:
+                            # Input Angka (Min 1, Max sesuai Stok)
+                            qty = st.number_input(
+                                "Jml", 
+                                min_value=1, 
+                                max_value=item['stok'], 
+                                value=1, 
+                                step=1, 
+                                key=f"q_{item['id']}", 
+                                label_visibility="collapsed"
+                            )
+                        with c_btn:
+                            if st.button("➕ Beli", key=f"b_{item['id']}"):
+                                tambah_ke_keranjang(item['nama_barang'], item['harga'], qty)
+                                st.rerun()
 
     with col_checkout:
         st.header("📝 Checkout")
@@ -204,9 +219,14 @@ elif menu == "🛍️ Pesan Barang":
                     No. Rek: **1234-5678-900**
                     An. Koperasi Lapas
                     """)
+                    st.info("""
+                    🏦 **Transfer Bank BCA**
+                    No. Rek: **1234-5678-900**
+                    An. Koperasi Lapas
+                    """)
                 else:
                     st.info("""
-                    📱 **E-Wallet (DANA/Gopay)**
+                    📱 **E-Wallet (DANA/Gopay/OVO)**
                     Nomor: **0812-3456-7890**
                     An. Admin Kantin
                     """)
@@ -294,3 +314,4 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
