@@ -184,11 +184,49 @@ if menu == "🏠 Beranda":
 # =========================================
 # 2. PESAN BARANG (MODEL TABS UNTUK HP)
 # =========================================
+# =========================================
+# 2. PESAN BARANG (FULL FEATURE: BACK TO TOP + FRAGMENT)
+# =========================================
 elif menu == "🛍️ Pesan Barang":
     # Hitung total duit dulu untuk keperluan floating bar
     total_duit = sum(i['harga'] for i in st.session_state.keranjang)
     
-    # --- CSS UNTUK FLOATING BAR (TOTAL HARGA MELAYANG DI BAWAH) ---
+    # --- 1. FITUR BACK TO TOP (TOMBOL PANAH ATAS) ---
+    # Posisi bottom: 90px agar tidak menutupi Floating Bar Total Harga
+    st.markdown("""
+        <style>
+            .back-to-top {
+                position: fixed;
+                bottom: 90px; 
+                right: 20px;
+                background-color: #00AAFF;
+                color: white;
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                text-align: center;
+                line-height: 45px;
+                font-size: 24px;
+                cursor: pointer;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+                z-index: 9999;
+                border: none;
+                transition: transform 0.2s;
+                opacity: 0.8;
+            }
+            .back-to-top:hover {
+                background-color: #0088cc;
+                opacity: 1;
+                transform: scale(1.1);
+            }
+        </style>
+        
+        <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'});" title="Kembali ke Atas">
+            ⬆️
+        </button>
+    """, unsafe_allow_html=True)
+
+    # --- 2. CSS UNTUK FLOATING BAR (TOTAL HARGA MELAYANG DI BAWAH) ---
     if total_duit > 0:
         st.markdown(f"""
         <style>
@@ -219,7 +257,7 @@ elif menu == "🛍️ Pesan Barang":
 
    # === TAB 1: ETALASE MENU (DENGAN FRAGMENT ANTI-REFRESH) ===
     with tab_menu:
-        # --- CSS Style (Tetap sama) ---
+        # --- CSS Style ---
         st.markdown("""
         <style>
             div[data-testid="stImage"] img {
@@ -267,7 +305,6 @@ elif menu == "🛍️ Pesan Barang":
                 """, unsafe_allow_html=True)
                 
                 # 3. TOMBOL (+ -)
-                # Hitung keranjang langsung dari session state
                 qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
                 
                 c_min, c_val, c_plus = st.columns([1, 1, 1])
@@ -302,7 +339,9 @@ elif menu == "🛍️ Pesan Barang":
                     # PANGGIL FUNGSI FRAGMENT DI SINI
                     kartu_produk_live(item)
             
-            st.write("\n" * 6)
+            # Spasi bawah yang banyak agar tombol Back to Top & Floating Bar tidak menutupi produk terakhir
+            st.write("\n" * 8)
+
     # === TAB 2: CHECKOUT / PEMBAYARAN ===
     with tab_checkout:
         st.header("📝 Konfirmasi Pesanan")
@@ -403,7 +442,6 @@ elif menu == "🛍️ Pesan Barang":
                         st.download_button("📥 Download Nota (JPG)", data=file_nota, file_name=f"{no_resi}.jpg", mime="image/jpeg")
                     else:
                         st.error("Mohon lengkapi semua data & upload bukti transfer!")
-
 # =========================================
 # 3. LACAK PESANAN (PERBAIKAN LOGIKA TOMBOL)
 # =========================================
@@ -483,6 +521,7 @@ elif menu == "🔍 Lacak Pesanan":
             # Jika dicari tapi tidak ketemu
             if resi_input: 
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
