@@ -155,7 +155,7 @@ if menu == "🏠 Beranda":
     st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
-# 2. PESAN BARANG
+# 2. PESAN BARANG (GAYA GOFOOD)
 # =========================================
 elif menu == "🛍️ Pesan Barang":
     col_etalase, col_checkout = st.columns([2.5, 1.2], gap="large")
@@ -169,28 +169,38 @@ elif menu == "🛍️ Pesan Barang":
             for i, item in enumerate(items):
                 with cols[i % 3]:
                     with st.container(border=True):
+                        # Gambar
                         img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
                         st.image(img, use_container_width=True)
                         st.write(f"**{item['nama_barang']}**")
                         st.caption(f"{format_rupiah(item['harga'])} | Stok: {item['stok']}")
                         
-                        # --- UPDATE: KOLOM UNTUK JUMLAH & TOMBOL ---
-                        c_qty, c_btn = st.columns([1.5, 2])
-                        with c_qty:
-                            # Input Angka (Min 1, Max sesuai Stok)
-                            qty = st.number_input(
-                                "Jml", 
-                                min_value=1, 
-                                max_value=item['stok'], 
-                                value=1, 
-                                step=1, 
-                                key=f"q_{item['id']}", 
-                                label_visibility="collapsed"
-                            )
-                        with c_btn:
-                            if st.button("➕ Beli", key=f"b_{item['id']}"):
-                                tambah_ke_keranjang(item['nama_barang'], item['harga'], qty)
-                                st.rerun()
+                        # --- LOGIKA HITUNG JUMLAH DI KERANJANG SAAT INI ---
+                        # Kita hitung ada berapa item ini di keranjang session_state
+                        qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
+                        
+                        # --- TOMBOL MINUS - ANGKA - PLUS ---
+                        c_min, c_val, c_plus = st.columns([1, 1, 1])
+                        
+                        # 1. Tombol Kurang
+                        with c_min:
+                            if st.button("➖", key=f"min_{item['id']}"):
+                                if qty_di_keranjang > 0:
+                                    kurangi_dari_keranjang(item['nama_barang'])
+                                    st.rerun() # Refresh agar angka berubah
+                        
+                        # 2. Angka Jumlah
+                        with c_val:
+                            st.markdown(f"<div class='qty-display'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
+                            
+                        # 3. Tombol Tambah
+                        with c_plus:
+                            if st.button("➕", key=f"plus_{item['id']}"):
+                                if qty_di_keranjang < item['stok']:
+                                    tambah_ke_keranjang(item['nama_barang'], item['harga'])
+                                    st.rerun() # Refresh agar angka berubah
+                                else:
+                                    st.toast("Stok Habis!", icon="⚠️")
 
     with col_checkout:
         st.header("📝 Checkout")
@@ -200,8 +210,18 @@ elif menu == "🛍️ Pesan Barang":
         else:
             with st.container(border=True):
                 st.write("**Rincian Pesanan:**")
-                for item in st.session_state.keranjang:
-                    st.caption(f"- {item['nama']} ({format_rupiah(item['harga'])})")
+                
+                # Menampilkan rincian yang sudah dikelompokkan
+                item_counts = {}
+                item_prices = {}
+                for x in st.session_state.keranjang:
+                    item_counts[x['nama']] = item_counts.get(x['nama'], 0) + 1
+                    item_prices[x['nama']] = x['harga']
+                
+                for nama, qty in item_counts.items():
+                    subtotal = qty * item_prices[nama]
+                    st.caption(f"- {qty}x {nama} ({format_rupiah(subtotal)})")
+                
                 st.divider()
                 
                 total_duit = sum(i['harga'] for i in st.session_state.keranjang)
@@ -217,14 +237,9 @@ elif menu == "🛍️ Pesan Barang":
                     No. Rek: **1234-5678-900**
                     An. Koperasi Lapas
                     """)
-                    st.info("""
-                    🏦 **Transfer Bank BCA**
-                    No. Rek: **1234-5678-900**
-                    An. Koperasi Lapas
-                    """)
                 else:
                     st.info("""
-                    📱 **E-Wallet (DANA/Gopay/OVO)**
+                    📱 **E-Wallet (DANA/Gopay)**
                     Nomor: **0812-3456-7890**
                     An. Admin Kantin
                     """)
@@ -252,10 +267,15 @@ elif menu == "🛍️ Pesan Barang":
                         )
                         url_nota = upload_file(file_nota, "nota", f"nota_{no_resi}.jpg")
                         
-                        list_items = ", ".join([b['nama'] for b in st.session_state.keranjang])
+                        # Membuat string item pesanan yang rapi (contoh: "2x Bakso, 1x Es Teh")
+                        list_items_str = []
+                        for nama, qty in item_counts.items():
+                            list_items_str.append(f"{qty}x {nama}")
+                        final_items_str = ", ".join(list_items_str)
+                        
                         data_db = {
                             "nama_pemesan": pemesan, "untuk_siapa": untuk,
-                            "item_pesanan": list_items, "cara_bayar": bayar,
+                            "item_pesanan": final_items_str, "cara_bayar": bayar,
                             "status": "Menunggu Verifikasi", "nomor_wa": wa,
                             "no_resi": no_resi,
                             "bukti_transfer": url_bukti,
@@ -263,18 +283,20 @@ elif menu == "🛍️ Pesan Barang":
                         }
                         supabase.table("pesanan").insert(data_db).execute()
                         
-                        for b in st.session_state.keranjang:
-                            cur = supabase.table("barang").select("stok").eq("nama_barang", b['nama']).execute()
+                        # Kurangi Stok
+                        for item_name in item_counts: # Loop per jenis barang
+                            qty_to_reduce = item_counts[item_name]
+                            cur = supabase.table("barang").select("stok").eq("nama_barang", item_name).execute()
                             if cur.data:
-                                supabase.table("barang").update({"stok": cur.data[0]['stok']-1}).eq("nama_barang", b['nama']).execute()
+                                current_stok = cur.data[0]['stok']
+                                supabase.table("barang").update({"stok": current_stok - qty_to_reduce}).eq("nama_barang", item_name).execute()
 
                         reset_keranjang()
                         
-                        # --- HALAMAN SUKSES (FITUR SALIN RESI) ---
+                        # --- HALAMAN SUKSES ---
                         st.success("🎉 Pesanan Berhasil Dikirim!")
                         
                         st.markdown("**👇 Salin Nomor Resi Ini:**")
-                        # Menggunakan st.code agar muncul tombol copy otomatis di pojok kanan
                         st.code(no_resi, language=None)
                         st.caption("Simpan resi ini untuk melacak status pesanan Anda.")
                         
@@ -283,7 +305,6 @@ elif menu == "🛍️ Pesan Barang":
                         st.download_button("📥 Download Nota (JPG)", data=file_nota, file_name=f"{no_resi}.jpg", mime="image/jpeg")
                     else:
                         st.error("Mohon lengkapi semua data & upload bukti transfer!")
-
 # =========================================
 # 3. LACAK PESANAN
 # =========================================
@@ -312,6 +333,7 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
