@@ -10,27 +10,55 @@ supabase = create_client(URL, KEY)
 st.set_page_config(page_title="Kantin Lapas Online", page_icon="🍱", layout="wide")
 
 # --- CSS CUSTOM ---
+# --- CSS CUSTOM UNTUK TAMPILAN CANTIK & STICKY ---
 st.markdown("""
 <style>
+    /* Mengubah warna tombol */
     .stButton>button {
         width: 100%;
         border-radius: 10px;
         font-weight: bold;
     }
+    
+    /* Card Style untuk Produk */
     div[data-testid="stVerticalBlock"] > div {
         background-color: #f9f9f9;
         border-radius: 10px;
         padding: 10px;
     }
+    
+    /* Harga Style */
     .harga-tag {
         color: #d9534f;
         font-size: 16px;
         font-weight: bold;
     }
-    /* Agar kolom kanan terlihat seperti panel terpisah */
+
+    /* --- LOGIKA STICKY (MENGAMBANG) --- */
+    /* Target Kolom Ke-2 (Form Checkout) */
     div[data-testid="column"]:nth-of-type(2) {
+        position: sticky;
+        top: 60px; /* Jarak dari atap layar (supaya tidak ketutup header) */
+        align-self: start; /* Agar tingginya menyesuaikan konten, bukan tinggi layar */
+        
+        /* Desain Panel Checkout */
         background-color: #ffffff;
         padding: 20px;
+        border-radius: 15px;
+        border: 1px solid #ddd;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.1); /* Efek bayangan */
+        z-index: 999; /* Agar selalu di atas */
+    }
+
+    /* Perbaikan agar di HP (Layar kecil) tidak sticky (biar tidak menutupi layar) */
+    @media (max-width: 640px) {
+        div[data-testid="column"]:nth-of-type(2) {
+            position: static;
+            top: auto;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
         border-radius: 15px;
         border: 1px solid #e0e0e0;
         height: fit-content;
@@ -189,3 +217,4 @@ elif menu == "🔍 Lacak Pesanan":
         res = supabase.table("pesanan").select("*").eq("id", id_cari).execute()
         if res.data:
             data = res
+
