@@ -11,7 +11,7 @@ URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-st.set_page_config(page_title="e-PAS Mart (Elektronik Pemasyarakatan Mart)", page_icon="🍱", layout="wide")
+st.set_page_config(page_title="e-PAS Mart | Belanja Cepat & Aman", page_icon="🛍️", layout="wide")
 
 # --- CSS CUSTOM ---
 st.markdown("""
@@ -36,49 +36,36 @@ def format_rupiah(angka):
 
 # --- FUNGSI GENERATE RESI ---
 def generate_resi():
-    # Format: KANTIN-TGL-ACAK (Contoh: KANTIN-2301-X7Z9)
     tanggal = time.strftime("%d%m")
     acak = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
     return f"KANTIN-{tanggal}-{acak}"
 
-# --- FUNGSI MEMBUAT GAMBAR NOTA (STRUK) ---
+# --- FUNGSI MEMBUAT GAMBAR NOTA ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
-    # Buat Kanvas Putih Panjang
     width, height = 500, 700
     img = Image.new('RGB', (width, height), color='white')
     d = ImageDraw.Draw(img)
+    try: font_header = ImageFont.load_default() 
+    except: pass
     
-    # Load Font (Default)
-    try:
-        # Gunakan font default sistem jika tidak ada font khusus
-        font_header = ImageFont.load_default() 
-        font_body = ImageFont.load_default()
-    except:
-        pass
-
-    # Warna
     black = (0, 0, 0)
     gray = (100, 100, 100)
     
-    # Header
-    d.text((160, 20), "e-PAS Mart (Elektronik Pemasyarakatan Mart)", fill=black, align="center")
-    d.text((150, 40), "Bukti Transaksi Resmi", fill=gray, align="center")
+    d.text((160, 20), "KANTIN LAPAS ONLINE", fill=black)
+    d.text((150, 40), "Bukti Transaksi Resmi", fill=gray)
     d.line((20, 70, 480, 70), fill=black, width=2)
     
-    # Detail Info
     y = 90
     d.text((30, y), f"NO. RESI  : {resi}", fill=black); y+=25
     d.text((30, y), f"TANGGAL   : {time.strftime('%d-%m-%Y %H:%M')}", fill=black); y+=25
     d.text((30, y), f"PENGIRIM  : {data_pesanan['nama_pemesan']}", fill=black); y+=25
     d.text((30, y), f"PENERIMA  : {data_pesanan['untuk_siapa']}", fill=black); y+=25
-    
     d.line((20, y+10, 480, y+10), fill=gray, width=1)
     y += 30
     
-    # List Barang
     d.text((30, y), "ITEM PESANAN:", fill=black); y+=25
     for item in list_keranjang:
-        nama = item['nama'][:30] # Potong jika kepanjangan
+        nama = item['nama'][:30]
         harga = format_rupiah(item['harga'])
         d.text((30, y), f"- {nama}", fill=black)
         d.text((350, y), harga, fill=black)
@@ -87,16 +74,11 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     d.line((20, y+10, 480, y+10), fill=black, width=2)
     y += 30
     
-    # Total
     d.text((30, y), "TOTAL BAYAR", fill=black)
-    d.text((350, y), format_rupiah(total_bayar), fill=(200, 0, 0)) # Merah
+    d.text((350, y), format_rupiah(total_bayar), fill=(200, 0, 0))
     y += 50
-    
-    # Footer
     d.text((120, y), "TERIMA KASIH ATAS KUNJUNGAN ANDA", fill=gray)
-    d.text((150, y+20), "Simpan resi ini untuk pelacakan", fill=gray)
     
-    # Simpan ke Buffer
     buf = io.BytesIO()
     img.save(buf, format='JPEG', quality=90)
     return buf.getvalue()
@@ -107,8 +89,7 @@ def upload_file(file_bytes, folder, nama_file):
         path = f"{folder}/{nama_file}"
         supabase.storage.from_("KANTIN-ASSETS").upload(path, file_bytes, {"upsert": "true", "content-type": "image/jpeg"})
         return supabase.storage.from_("KANTIN-ASSETS").get_public_url(path)
-    except Exception as e:
-        return None
+    except Exception as e: return None
 
 # --- SESSION STATE KERANJANG ---
 if 'keranjang' not in st.session_state: st.session_state.keranjang = []
@@ -124,7 +105,10 @@ with st.sidebar:
     st.title("🛒 Keranjang")
     if len(st.session_state.keranjang) > 0:
         total = sum(i['harga'] for i in st.session_state.keranjang)
-        st.write(f"Item: {len(st.session_state.keranjang)} | Total: **{format_rupiah(total)}**")
+        for i, item in enumerate(st.session_state.keranjang):
+            st.write(f"{i+1}. {item['nama']}")
+        st.divider()
+        st.write(f"Total: **{format_rupiah(total)}**")
         if st.button("❌ Kosongkan"): reset_keranjang(); st.rerun()
     else: st.info("Kosong.")
 
@@ -134,25 +118,15 @@ menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "�
 # =========================================
 # 1. BERANDA
 # =========================================
-# =========================================
-# 1. HALAMAN BERANDA
-# =========================================
-# =========================================
-# 1. HALAMAN BERANDA (UPDATE TEKS BARU)
-# =========================================
 if menu == "🏠 Beranda":
-    # --- BANNER FOTO (Kecil di Tengah) ---
     c_kiri, c_tengah, c_kanan = st.columns([1, 2, 1])
     with c_tengah:
         st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
     
-    # --- JUDUL UTAMA ---
     st.markdown("<h1 style='text-align: center;'>e-PAS Mart Lapas Arga Makmur</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: #555;'>Belanja Aman, Transparan, dan Tanpa Uang Tunai</h3>", unsafe_allow_html=True)
-    
-    st.write("") # Jarak spasi
+    st.write("") 
 
-    # --- INTRO ---
     st.markdown("""
     <div style='text-align: center;'>
         Selamat datang di era baru pelayanan Lapas Arga Makmur melalui <b>e-PAS Mart</b>.<br>
@@ -161,40 +135,29 @@ if menu == "🏠 Beranda":
     """, unsafe_allow_html=True)
 
     st.divider()
-
-    # --- INFO CASHLESS ---
     st.info("💡 **Mengapa e-PAS Mart berbeda?** Karena kami menerapkan prinsip **100% Cashless (Non-Tunai)**.")
-
-    # --- KEUNGGULAN (DIBUAT 3 KOLOM AGAR RAPI) ---
     st.subheader("✨ Keunggulan e-PAS Mart")
     
     col1, col2, col3 = st.columns(3)
-
     with col1:
         with st.container(border=True):
             st.markdown("### 💳")
             st.markdown("**Sistem Pembayaran Digital**")
-            st.caption("Tidak ada lagi uang fisik yang beredar. Warga Binaan menggunakan kartu khusus/saldo virtual untuk bertransaksi.")
-
+            st.caption("Tidak ada lagi uang fisik yang beredar. WBP menggunakan saldo virtual.")
     with col2:
         with st.container(border=True):
             st.markdown("### 🛡️")
             st.markdown("**Cegah Pungli & Aman**")
-            st.caption("Tanpa uang tunai, potensi penyimpangan dan kejahatan di dalam Lapas dapat diminimalisir secara signifikan.")
-
+            st.caption("Tanpa uang tunai, potensi penyimpangan dan kejahatan diminimalisir.")
     with col3:
         with st.container(border=True):
             st.markdown("### 📝")
             st.markdown("**Tercatat & Terpantau**")
-            st.caption("Keluarga di rumah lebih tenang karena dana terpantau jelas penggunaannya untuk kebutuhan sehari-hari WBP.")
-
-    st.write("") # Spasi
-
-    # --- PENUTUP ---
+            st.caption("Keluarga lebih tenang karena dana terpantau jelas penggunaannya.")
     st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
-# 2. PESAN BARANG (LOGIKA REKENING DINAMIS)
+# 2. PESAN BARANG
 # =========================================
 elif menu == "🛍️ Pesan Barang":
     col_etalase, col_checkout = st.columns([2.5, 1.2], gap="large")
@@ -223,7 +186,6 @@ elif menu == "🛍️ Pesan Barang":
             st.info("Keranjang kosong. Silakan pilih menu di sebelah kiri.")
         else:
             with st.container(border=True):
-                # 1. Rincian Barang
                 st.write("**Rincian Pesanan:**")
                 for item in st.session_state.keranjang:
                     st.caption(f"- {item['nama']} ({format_rupiah(item['harga'])})")
@@ -233,11 +195,9 @@ elif menu == "🛍️ Pesan Barang":
                 st.markdown(f"### Total: {format_rupiah(total_duit)}")
                 st.divider()
 
-                # 2. PILIHAN METODE BAYAR (DI LUAR FORM AGAR INTERAKTIF)
                 st.write("**Pilih Metode Pembayaran:**")
                 bayar = st.selectbox("Metode", ["Transfer Bank (BRI/BCA)", "E-Wallet (DANA/Gopay)"], label_visibility="collapsed")
                 
-                # 3. INFO REKENING YANG BERUBAH SESUAI PILIHAN
                 if "Transfer Bank" in bayar:
                     st.info("""
                     🏦 **Transfer Bank BRI**
@@ -251,20 +211,15 @@ elif menu == "🛍️ Pesan Barang":
                     An. Admin Kantin
                     """)
 
-                # 4. FORM PENGISIAN DATA (HANYA INPUT & SUBMIT)
                 with st.form("form_pesan"):
                     pemesan = st.text_input("Nama Pengirim")
                     untuk = st.text_input("Nama WBP (Penerima)")
                     wa = st.text_input("WhatsApp")
-                    
-                    # Upload Bukti
                     st.write("**Bukti Transfer:**")
                     bukti_tf = st.file_uploader("Upload Foto/Screenshot", type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
-
                     st.markdown("---")
                     submit = st.form_submit_button("✅ KIRIM PESANAN", type="primary")
                     
-                # 5. LOGIKA PROSES (DITARUH DI LUAR FORM - PENTING!)
                 if submit:
                     if pemesan and untuk and wa and bukti_tf:
                         no_resi = generate_resi()
@@ -296,38 +251,42 @@ elif menu == "🛍️ Pesan Barang":
                                 supabase.table("barang").update({"stok": cur.data[0]['stok']-1}).eq("nama_barang", b['nama']).execute()
 
                         reset_keranjang()
-                        st.success("🎉 Pesanan Berhasil!")
-                        st.write(f"Nomor Resi: **{no_resi}**")
-                        st.image(file_nota, caption="Nota Resmi", width=300)
                         
-                        # TOMBOL DOWNLOAD AMAN KARENA SUDAH DI LUAR FORM
+                        # --- HALAMAN SUKSES (FITUR SALIN RESI) ---
+                        st.success("🎉 Pesanan Berhasil Dikirim!")
+                        
+                        st.markdown("**👇 Salin Nomor Resi Ini:**")
+                        # Menggunakan st.code agar muncul tombol copy otomatis di pojok kanan
+                        st.code(no_resi, language=None)
+                        st.caption("Simpan resi ini untuk melacak status pesanan Anda.")
+                        
+                        st.divider()
+                        st.image(file_nota, caption="Nota Resmi", width=300)
                         st.download_button("📥 Download Nota (JPG)", data=file_nota, file_name=f"{no_resi}.jpg", mime="image/jpeg")
                     else:
                         st.error("Mohon lengkapi semua data & upload bukti transfer!")
+
 # =========================================
-# 3. LACAK PESANAN (PAKAI NO RESI)
+# 3. LACAK PESANAN
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Status Pesanan")
-    resi_input = st.text_input("Masukkan Nomor Resi (Contoh: KANTIN-2301-X7Z9)")
+    resi_input = st.text_input("Masukkan Nomor Resi")
     
     if st.button("🔍 Cek Resi"):
         if resi_input:
-            # Cari berdasarkan kolom no_resi
             res = supabase.table("pesanan").select("*").eq("no_resi", resi_input).execute()
             if res.data:
                 d = res.data[0]
                 st.success(f"Pesanan Ditemukan: {d['no_resi']}")
-                
                 c1, c2 = st.columns(2)
                 with c1:
                     st.write(f"**Penerima:** {d['untuk_siapa']}")
                     st.write(f"**Item:** {d['item_pesanan']}")
                 with c2:
                     st.write(f"**Status Terkini:**")
-                    # Progress Bar logic
                     stat = d['status']
-                    val = 10 if stat == "Menunggu Verifikasi" else 50 if stat == "Diproses" else 100
+                    val = 10 if stat == "Menunggu Verifikasi" else 50 if stat == "Pembayaran Valid (Diproses)" else 100
                     st.progress(val, text=stat)
                 
                 if d['status'] == "Selesai" and d['foto_penerima']:
@@ -335,12 +294,3 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
-
-
-
-
-
-
-
-
-
