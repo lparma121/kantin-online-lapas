@@ -3,14 +3,15 @@ from supabase import create_client
 import time
 
 # --- KONEKSI DATABASE ---
+# Pastikan secrets Anda sudah benar di Streamlit Cloud
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
 st.set_page_config(page_title="Kantin Lapas Online", page_icon="🍱", layout="wide")
 
-# --- CSS CUSTOM ---
-# --- CSS CUSTOM UNTUK TAMPILAN CANTIK & STICKY ---
+# --- CSS CUSTOM (TAMPILAN CANTIK & STICKY) ---
+# Perhatikan: Bagian ini harus dimulai rata kiri (tanpa spasi di awal baris st.markdown)
 st.markdown("""
 <style>
     /* Mengubah warna tombol */
@@ -38,30 +39,24 @@ st.markdown("""
     /* Target Kolom Ke-2 (Form Checkout) */
     div[data-testid="column"]:nth-of-type(2) {
         position: sticky;
-        top: 60px; /* Jarak dari atap layar (supaya tidak ketutup header) */
-        align-self: start; /* Agar tingginya menyesuaikan konten, bukan tinggi layar */
+        top: 60px; /* Jarak dari atap layar */
+        align-self: start; 
         
         /* Desain Panel Checkout */
         background-color: #ffffff;
         padding: 20px;
         border-radius: 15px;
         border: 1px solid #ddd;
-        box-shadow: 0px 4px 12px rgba(0,0,0,0.1); /* Efek bayangan */
-        z-index: 999; /* Agar selalu di atas */
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+        z-index: 999;
     }
 
-    /* Perbaikan agar di HP (Layar kecil) tidak sticky (biar tidak menutupi layar) */
+    /* Perbaikan agar di HP (Layar kecil) tidak sticky */
     @media (max-width: 640px) {
         div[data-testid="column"]:nth-of-type(2) {
             position: static;
             top: auto;
         }
-    }
-</style>
-""", unsafe_allow_html=True)
-        border-radius: 15px;
-        border: 1px solid #e0e0e0;
-        height: fit-content;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -113,11 +108,11 @@ if menu == "🏠 Beranda":
     with col3: st.warning("🛡️ **Transparan**")
 
 # =========================================
-# 2. HALAMAN BELANJA (LAYOUT BARU)
+# 2. HALAMAN BELANJA (LAYOUT STICKY)
 # =========================================
 elif menu == "🛍️ Pesan Barang":
     
-    # MEMBAGI LAYAR JADI 2 KOLOM (Kiri Besar, Kanan Kecil)
+    # MEMBAGI LAYAR JADI 2 KOLOM
     col_etalase, col_checkout = st.columns([2.5, 1.2], gap="large")
 
     # --- KOLOM KIRI: DAFTAR PRODUK ---
@@ -146,7 +141,7 @@ elif menu == "🛍️ Pesan Barang":
                             tambah_ke_keranjang(item['nama_barang'], harga)
                             st.rerun()
 
-    # --- KOLOM KANAN: FORM CHECKOUT (FORMULIR PENGIRIMAN) ---
+    # --- KOLOM KANAN: FORM CHECKOUT (STICKY) ---
     with col_checkout:
         st.header("📝 Data Pengiriman")
         st.write("Lengkapi data di bawah ini:")
@@ -156,7 +151,6 @@ elif menu == "🛍️ Pesan Barang":
             st.info("⚠️ Pilih barang di sebelah kiri untuk mulai memesan.")
         else:
             with st.container(border=True):
-                # Ringkasan Singkat
                 st.caption(f"Item di keranjang: {len(st.session_state.keranjang)}")
                 st.markdown(f"### Total: {format_rupiah(sum(item['harga'] for item in st.session_state.keranjang))}")
                 st.divider()
@@ -216,5 +210,12 @@ elif menu == "🔍 Lacak Pesanan":
     if tombol_cari:
         res = supabase.table("pesanan").select("*").eq("id", id_cari).execute()
         if res.data:
-            data = res
-
+            data = res.data[0]
+            st.info(f"Pesanan untuk: **{data['untuk_siapa']}**")
+            status_map = {"Menunggu Antrian": 30, "Diproses": 60, "Selesai": 100}
+            st.progress(status_map.get(data['status'], 10), text=f"Status: {data['status']}")
+            
+            if data['status'] == "Selesai" and data['foto_penerima']:
+                st.image(data['foto_penerima'], caption="Bukti Foto")
+        else:
+            st.error("Data tidak ditemukan.")
