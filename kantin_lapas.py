@@ -244,9 +244,14 @@ elif menu == "🛍️ Pesan Barang":
                     No. Rek: **1234-5678-900**
                     An. Koperasi Lapas
                     """)
+                    st.info("""
+                    🏦 **Transfer Bank BCA**
+                    No. Rek: **1234-5678-900**
+                    An. Koperasi Lapas
+                    """)
                 else:
                     st.info("""
-                    📱 **E-Wallet (DANA/Gopay)**
+                    📱 **E-Wallet (DANA/Gopay/OVO)**
                     Nomor: **0812-3456-7890**
                     An. Admin Kantin
                     """)
@@ -332,6 +337,7 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
