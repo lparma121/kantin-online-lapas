@@ -168,6 +168,8 @@ elif menu == "🛍️ Pesan Barang":
                         st.markdown("""
                         - **BRI**: 1234-5678-9000 (An. Koperasi Lapas)
                         - **DANA**: 0812-3456-7890
+                        - **OVO**: 0812-3456-7890
+                        - **GoPay**: 0812-3456-7890
                         *(Simpan bukti transfer untuk dikirim via WA)*
                         """)
 
@@ -228,3 +230,4 @@ elif menu == "🔍 Lacak Pesanan":
                 st.image(data['foto_penerima'], caption="Bukti Foto")
         else:
             st.error("Data tidak ditemukan.")
+
