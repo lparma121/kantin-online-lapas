@@ -16,7 +16,7 @@ st.set_page_config(page_title="e-PAS Mart | Belanja Cepat & Aman", page_icon="�
 # --- CSS CUSTOM ---
 st.markdown("""
 <style>
-    .stButton>button { width: 100%; border-radius: 10px; font-weight: bold; }
+    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; }
     div[data-testid="stVerticalBlock"] > div { background-color: #f9f9f9; border-radius: 10px; padding: 10px; }
     .harga-tag { color: #d9534f; font-size: 16px; font-weight: bold; }
     
@@ -26,6 +26,12 @@ st.markdown("""
         background-color: #ffffff; padding: 20px; border-radius: 15px;
         border: 1px solid #e0e0e0; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); z-index: 100;
     }
+    
+    /* Agar angka qty di tengah terlihat besar & rapi */
+    .qty-display {
+        text-align: center; font-size: 20px; font-weight: bold; margin-top: 5px;
+    }
+    
     @media (max-width: 640px) { div[data-testid="column"]:nth-of-type(2) { position: static; top: auto; } }
 </style>
 """, unsafe_allow_html=True)
@@ -38,7 +44,7 @@ def format_rupiah(angka):
 def generate_resi():
     tanggal = time.strftime("%d%m")
     acak = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-    return f"e-PAS MART-{tanggal}-{acak}"
+    return f"KANTIN-{tanggal}-{acak}"
 
 # --- FUNGSI MEMBUAT GAMBAR NOTA ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
@@ -92,19 +98,41 @@ def upload_file(file_bytes, folder, nama_file):
     except Exception as e: return None
 
 # --- SESSION STATE KERANJANG ---
-def tambah_ke_keranjang(item, harga, jumlah):
-    for _ in range(jumlah):
-        st.session_state.keranjang.append({"nama": item, "harga": harga})
-    st.toast(f"🛒 {jumlah}x {item} masuk keranjang!")
+if 'keranjang' not in st.session_state: st.session_state.keranjang = []
+
+# --- LOGIKA TAMBAH (PLUS) ---
+def tambah_ke_keranjang(item, harga):
+    st.session_state.keranjang.append({"nama": item, "harga": harga})
+    # Kita tidak pakai toast agar tidak spamming notifikasi saat klik cepat
+    # st.toast(f"🛒 {item} masuk keranjang!") 
+
+# --- LOGIKA KURANG (MINUS) ---
+def kurangi_dari_keranjang(nama_item):
+    # Cari item pertama yang namanya cocok, lalu hapus
+    for index, item in enumerate(st.session_state.keranjang):
+        if item['nama'] == nama_item:
+            del st.session_state.keranjang[index]
+            break
 
 def reset_keranjang(): st.session_state.keranjang = []
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🛒 Keranjang")
     if len(st.session_state.keranjang) > 0:
         total = sum(i['harga'] for i in st.session_state.keranjang)
-        for i, item in enumerate(st.session_state.keranjang):
-            st.write(f"{i+1}. {item['nama']}")
+        st.caption("Daftar item:")
+        
+        # Menghitung jumlah per item untuk tampilan ringkas
+        item_counts = {}
+        item_prices = {}
+        for x in st.session_state.keranjang:
+            item_counts[x['nama']] = item_counts.get(x['nama'], 0) + 1
+            item_prices[x['nama']] = x['harga']
+            
+        for nama, qty in item_counts.items():
+            st.write(f"{qty}x {nama}")
+            
         st.divider()
         st.write(f"Total: **{format_rupiah(total)}**")
         if st.button("❌ Kosongkan"): reset_keranjang(); st.rerun()
@@ -305,6 +333,7 @@ elif menu == "🛍️ Pesan Barang":
                         st.download_button("📥 Download Nota (JPG)", data=file_nota, file_name=f"{no_resi}.jpg", mime="image/jpeg")
                     else:
                         st.error("Mohon lengkapi semua data & upload bukti transfer!")
+
 # =========================================
 # 3. LACAK PESANAN
 # =========================================
@@ -333,7 +362,3 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
-
-
-
-
