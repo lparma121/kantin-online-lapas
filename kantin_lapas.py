@@ -136,7 +136,28 @@ with st.sidebar:
 # --- NAVIGASI ---
 menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "🔍 Lacak Pesanan"])
 
-https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg
+# =========================================
+# 1. BERANDA
+# =========================================
+if menu == "🏠 Beranda":
+    # UBAH DISINI: Angka [0.5, 3, 0.5] membuat gambar lebih lebar agar tulisan terbaca
+    c_kiri, c_tengah, c_kanan = st.columns([0.5, 3, 0.5])
+    
+    with c_tengah:
+        # GANTI "LINK_DARI_SUPABASE_DISINI" dengan link yang Anda copy tadi
+        st.image("https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg", use_container_width=True)
+    
+    # Judul teks di bawahnya bisa dihapus atau disederhanakan karena sudah ada di banner
+    # st.markdown("<h1 style='text-align: center;'>e-PAS Mart Lapas Arga Makmur</h1>", unsafe_allow_html=True) 
+    
+    # Langsung ke sub-judul atau intro
+    st.write("") 
+    st.markdown("""
+    <div style='text-align: center; font-size: 18px;'>
+        Selamat datang di era baru pelayanan <b>Lapas Arga Makmur</b>.<br>
+        Belanja Aman, Transparan, dan Tanpa Uang Tunai.
+    </div>
+    """, unsafe_allow_html=True)
 
     st.divider()
     st.info("💡 **Mengapa e-PAS Mart berbeda?** Karena kami menerapkan prinsip **100% Cashless (Non-Tunai)**.")
@@ -360,4 +381,3 @@ elif menu == "🔍 Lacak Pesanan":
                             
             else:
                 st.error("Nomor Resi tidak ditemukan.")
-
