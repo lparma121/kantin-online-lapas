@@ -273,62 +273,83 @@ elif menu_admin == "📋 Daftar Pesanan":
         render_pesanan(filter_data, "Search")
     
     else:
-        # TAB 1: PESANAN MASUK (Menunggu Verifikasi)
+       # TAB 1: PESANAN MASUK (Menunggu Verifikasi)
         with tab1:
             st.header("📥 Pesanan Baru Masuk")
             res = supabase.table("pesanan").select("*").eq("status", "Menunggu Verifikasi").order("id", desc=True).execute()
             
             if not res.data:
-                st.info("Tidak ada pesanan baru.")
+                st.info("✅ Tidak ada antrian pesanan baru.")
             else:
                 for p in res.data:
                     with st.container(border=True):
                         cols = st.columns([1, 2, 2])
                         
-                        # KOLOM 1: BUKTI & INFO
+                        # KOLOM 1: BUKTI TRANSFER
                         with cols[0]:
                             st.subheader(f"#{p['id']}")
                             st.caption(f"Resi: {p.get('no_resi', '-')}")
                             
-                            # TAMPILKAN BUKTI TRANSFER (WAJIB CEK DISINI)
                             if p.get('bukti_transfer'):
-                                st.image(p['bukti_transfer'], caption="Cek Bukti Ini!", width=150)
-                                st.link_button("🔍 Zoom Bukti", p['bukti_transfer'])
+                                st.image(p['bukti_transfer'], caption="Cek Bukti TF", width=150)
+                                st.link_button("🔍 Zoom Gambar", p['bukti_transfer'])
                             else:
-                                st.error("❌ TIDAK ADA BUKTI TF")
+                                st.error("❌ TIDAK ADA BUKTI")
+                                st.caption("Hati-hati penipuan!")
                         
-                        # KOLOM 2: DETAIL ITEM
+                        # KOLOM 2: DETAIL PESANAN
                         with cols[1]:
                             st.write(f"**Pengirim:** {p['nama_pemesan']}")
                             st.write(f"**Penerima:** {p['untuk_siapa']}")
                             st.info(f"Metode: {p.get('cara_bayar', '-')}")
                             st.code(f"Isi: {p['item_pesanan']}")
 
-                        # KOLOM 3: KEPUTUSAN ADMIN
+                        # KOLOM 3: TINDAKAN ADMIN (DENGAN PENGAMAN)
                         with cols[2]:
                             st.write("---")
                             st.write("**Tindakan Admin:**")
-                            st.write("Lihat foto di kiri. Uang masuk?")
                             
-                            c_proses, c_tolak = st.columns(2)
-                            
-                            # TOMBOL PROSES (JIKA UANG MASUK)
-                            with c_proses:
-                                if st.button("✅ TERIMA", key=f"acc_{p['id']}", type="primary", use_container_width=True):
-                                    supabase.table("pesanan").update({"status": "Pembayaran Valid (Diproses)"}).eq("id", p['id']).execute()
-                                    st.success("Pesanan diproses!")
-                                    time.sleep(1)
-                                    st.rerun()
-                            
-                            # TOMBOL TOLAK (JIKA BUKTI PALSU/SAMPAH)
-                            with c_tolak:
-                                if st.button("🗑️ TOLAK", key=f"rej_{p['id']}", use_container_width=True):
-                                    # Hapus langsung dari database karena ini sampah
-                                    supabase.table("pesanan").delete().eq("id", p['id']).execute()
-                                    st.error("Pesanan palsu dihapus!")
-                                    time.sleep(1)
-                                    st.rerun()
+                            # Cek State Konfirmasi untuk ID ini
+                            confirm_key = f"confirm_del_{p['id']}"
+                            if confirm_key not in st.session_state:
+                                st.session_state[confirm_key] = False
 
+                            # JIKA BELUM KLIK HAPUS (TAMPILAN NORMAL)
+                            if not st.session_state[confirm_key]:
+                                c_proses, c_tolak = st.columns(2)
+                                
+                                # Tombol Terima
+                                with c_proses:
+                                    if st.button("✅ TERIMA", key=f"acc_{p['id']}", type="primary", use_container_width=True):
+                                        supabase.table("pesanan").update({"status": "Pembayaran Valid (Diproses)"}).eq("id", p['id']).execute()
+                                        st.success("Pesanan diterima!")
+                                        time.sleep(1)
+                                        st.rerun()
+                                
+                                # Tombol Tolak (Memicu Konfirmasi)
+                                with c_tolak:
+                                    if st.button("🗑️ TOLAK", key=f"pre_del_{p['id']}", use_container_width=True):
+                                        st.session_state[confirm_key] = True # Aktifkan mode konfirmasi
+                                        st.rerun()
+
+                            # JIKA SEDANG KONFIRMASI HAPUS (MODE AWAS)
+                            else:
+                                st.warning("⚠️ **Yakin tolak & hapus permanen?** Data tidak bisa kembali.")
+                                c_yakin, c_batal = st.columns(2)
+                                
+                                with c_yakin:
+                                    if st.button("YA, HAPUS", key=f"fix_del_{p['id']}", type="primary", use_container_width=True):
+                                        # Eksekusi Hapus
+                                        supabase.table("pesanan").delete().eq("id", p['id']).execute()
+                                        st.error("Data berhasil dihapus.")
+                                        del st.session_state[confirm_key] # Bersihkan memori
+                                        time.sleep(1)
+                                        st.rerun()
+                                
+                                with c_batal:
+                                    if st.button("BATAL", key=f"cancel_del_{p['id']}", use_container_width=True):
+                                        st.session_state[confirm_key] = False # Kembali ke normal
+                                        st.rerun()
         # TAB 2: SEDANG DIPROSES
         with tab2:
             st.header("📦 Sedang Disiapkan / Diproses")
