@@ -135,8 +135,8 @@ menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "�
 # 1. BERANDA
 # =========================================
 if menu == "🏠 Beranda":
-    st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
     st.title("Kantin Online Lapas Arga Makmur")
+    st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
     st.write("Belanja kebutuhan WBP mudah, aman, dan transparan.")
 
 # =========================================
@@ -267,3 +267,4 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
