@@ -273,9 +273,11 @@ elif menu_admin == "📋 Daftar Pesanan":
         render_pesanan(filter_data, "Search")
     
     else:
-       # TAB 1: PESANAN MASUK (Menunggu Verifikasi)
+      # TAB 1: PESANAN MASUK (Menunggu Verifikasi)
         with tab1:
             st.header("📥 Pesanan Baru Masuk")
+            
+            # Ambil data
             res = supabase.table("pesanan").select("*").eq("status", "Menunggu Verifikasi").order("id", desc=True).execute()
             
             if not res.data:
@@ -295,7 +297,6 @@ elif menu_admin == "📋 Daftar Pesanan":
                                 st.link_button("🔍 Zoom Gambar", p['bukti_transfer'])
                             else:
                                 st.error("❌ TIDAK ADA BUKTI")
-                                st.caption("Hati-hati penipuan!")
                         
                         # KOLOM 2: DETAIL PESANAN
                         with cols[1]:
@@ -304,52 +305,32 @@ elif menu_admin == "📋 Daftar Pesanan":
                             st.info(f"Metode: {p.get('cara_bayar', '-')}")
                             st.code(f"Isi: {p['item_pesanan']}")
 
-                        # KOLOM 3: TINDAKAN ADMIN (DENGAN PENGAMAN)
+                        # KOLOM 3: TINDAKAN ADMIN (VERSI EXPANDER - LEBIH STABIL)
                         with cols[2]:
                             st.write("---")
-                            st.write("**Tindakan Admin:**")
+                            st.write("**Keputusan:**")
                             
-                            # Cek State Konfirmasi untuk ID ini
-                            confirm_key = f"confirm_del_{p['id']}"
-                            if confirm_key not in st.session_state:
-                                st.session_state[confirm_key] = False
-
-                            # JIKA BELUM KLIK HAPUS (TAMPILAN NORMAL)
-                            if not st.session_state[confirm_key]:
-                                c_proses, c_tolak = st.columns(2)
+                            # 1. TOMBOL TERIMA (Hijau)
+                            if st.button("✅ TERIMA PESANAN", key=f"acc_{p['id']}", type="primary", use_container_width=True):
+                                supabase.table("pesanan").update({"status": "Pembayaran Valid (Diproses)"}).eq("id", p['id']).execute()
+                                st.success("Pesanan diterima!")
+                                time.sleep(1)
+                                st.rerun()
+                            
+                            st.write("") # Spasi sedikit
+                            
+                            # 2. PENGAMAN HAPUS (Menu Lipat)
+                            # Tombol hapus sembunyi di dalam sini. Admin harus klik panah dulu baru bisa hapus.
+                            with st.expander("🗑️ Opsi Tolak / Hapus"):
+                                st.warning("⚠️ **Yakin hapus pesanan ini?**")
+                                st.caption("Data akan hilang permanen dan tidak bisa dikembalikan.")
                                 
-                                # Tombol Terima
-                                with c_proses:
-                                    if st.button("✅ TERIMA", key=f"acc_{p['id']}", type="primary", use_container_width=True):
-                                        supabase.table("pesanan").update({"status": "Pembayaran Valid (Diproses)"}).eq("id", p['id']).execute()
-                                        st.success("Pesanan diterima!")
-                                        time.sleep(1)
-                                        st.rerun()
-                                
-                                # Tombol Tolak (Memicu Konfirmasi)
-                                with c_tolak:
-                                    if st.button("🗑️ TOLAK", key=f"pre_del_{p['id']}", use_container_width=True):
-                                        st.session_state[confirm_key] = True # Aktifkan mode konfirmasi
-                                        st.rerun()
-
-                            # JIKA SEDANG KONFIRMASI HAPUS (MODE AWAS)
-                            else:
-                                st.warning("⚠️ **Yakin tolak & hapus permanen?** Data tidak bisa kembali.")
-                                c_yakin, c_batal = st.columns(2)
-                                
-                                with c_yakin:
-                                    if st.button("YA, HAPUS", key=f"fix_del_{p['id']}", type="primary", use_container_width=True):
-                                        # Eksekusi Hapus
-                                        supabase.table("pesanan").delete().eq("id", p['id']).execute()
-                                        st.error("Data berhasil dihapus.")
-                                        del st.session_state[confirm_key] # Bersihkan memori
-                                        time.sleep(1)
-                                        st.rerun()
-                                
-                                with c_batal:
-                                    if st.button("BATAL", key=f"cancel_del_{p['id']}", use_container_width=True):
-                                        st.session_state[confirm_key] = False # Kembali ke normal
-                                        st.rerun()
+                                # Tombol Merah "Kill Switch"
+                                if st.button("🔥 YA, HAPUS SEKARANG", key=f"del_fix_{p['id']}", use_container_width=True):
+                                    supabase.table("pesanan").delete().eq("id", p['id']).execute()
+                                    st.error("Data berhasil dihapus.")
+                                    time.sleep(1)
+                                    st.rerun()
         # TAB 2: SEDANG DIPROSES
         with tab2:
             st.header("📦 Sedang Disiapkan / Diproses")
