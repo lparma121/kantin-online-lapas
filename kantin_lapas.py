@@ -192,7 +192,7 @@ elif menu == "🛍️ Pesan Barang":
     # Hitung total duit dulu untuk keperluan floating bar
     total_duit = sum(i['harga'] for i in st.session_state.keranjang)
     
-    # --- 1. FITUR BACK TO TOP (JURUS PAMUNGKAS) ---
+    # --- 1. FITUR BACK TO TOP (VERSI LINK ANCHOR - LEBIH STABIL) ---
     st.markdown("""
         <style>
             .back-to-top {
@@ -200,36 +200,31 @@ elif menu == "🛍️ Pesan Barang":
                 bottom: 90px; 
                 right: 20px;
                 background-color: #00AAFF;
-                color: white;
+                color: white !important; /* Warna teks putih */
                 width: 50px;
                 height: 50px;
                 border-radius: 50%;
                 text-align: center;
-                line-height: 50px; /* Vertikal centering text */
+                line-height: 50px;
                 font-size: 24px;
-                cursor: pointer;
                 box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-                z-index: 999999; /* Z-index sangat tinggi agar selalu di atas */
-                border: 2px solid white; /* Tambah border putih biar kelihatan */
-                transition: transform 0.2s;
+                z-index: 999999;
+                text-decoration: none; /* Hilangkan garis bawah link */
+                display: block;
+                border: 2px solid white;
+            }
+            .back-to-top:hover {
+                background-color: #0088cc;
+                transform: scale(1.1);
             }
             .back-to-top:active {
                 transform: scale(0.9);
-                background-color: #0088cc;
             }
         </style>
         
-        <button class="back-to-top" 
-            onclick="
-                var targets = window.parent.document.querySelectorAll('section.main, [data-testid=\'stAppViewContainer\'], .stApp');
-                targets.forEach(function(t) {
-                    t.scrollTo({ top: 0, behavior: 'smooth' });
-                    t.scrollTop = 0; // Fallback jika smooth scroll gagal
-                });
-            "
-            title="Kembali ke Atas">
+        <a href="#paling-atas" class="back-to-top" target="_self">
             ⬆️
-        </button>
+        </a>
     """, unsafe_allow_html=True)
     # --- 2. CSS UNTUK FLOATING BAR (TOTAL HARGA MELAYANG DI BAWAH) ---
     if total_duit > 0:
@@ -526,6 +521,7 @@ elif menu == "🔍 Lacak Pesanan":
             # Jika dicari tapi tidak ketemu
             if resi_input: 
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
