@@ -194,7 +194,7 @@ if menu == "🏠 Beranda":
     st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
-# 2. PESAN BARANG (DENGAN LIST BARANG DI CHECKOUT)
+# 2. PESAN BARANG (LOGIKA REKENING DINAMIS)
 # =========================================
 elif menu == "🛍️ Pesan Barang":
     col_etalase, col_checkout = st.columns([2.5, 1.2], gap="large")
@@ -223,28 +223,45 @@ elif menu == "🛍️ Pesan Barang":
             st.info("Keranjang kosong. Silakan pilih menu di sebelah kiri.")
         else:
             with st.container(border=True):
-                # --- FITUR BARU: MENAMPILKAN RINCIAN ITEM ---
+                # 1. Rincian Barang
                 st.write("**Rincian Pesanan:**")
                 for item in st.session_state.keranjang:
                     st.caption(f"- {item['nama']} ({format_rupiah(item['harga'])})")
-                
                 st.divider()
                 
                 total_duit = sum(i['harga'] for i in st.session_state.keranjang)
                 st.markdown(f"### Total: {format_rupiah(total_duit)}")
                 st.divider()
 
+                # 2. PILIHAN METODE BAYAR (DI LUAR FORM AGAR INTERAKTIF)
+                st.write("**Pilih Metode Pembayaran:**")
+                bayar = st.selectbox("Metode", ["Transfer Bank (BRI/BCA)", "E-Wallet (DANA/Gopay)"], label_visibility="collapsed")
+                
+                # 3. INFO REKENING YANG BERUBAH SESUAI PILIHAN
+                if "Transfer Bank" in bayar:
+                    st.info("""
+                    🏦 **Transfer Bank BRI**
+                    No. Rek: **1234-5678-900**
+                    An. Koperasi Lapas
+                    """)
+                else:
+                    st.info("""
+                    📱 **E-Wallet (DANA/Gopay)**
+                    Nomor: **0812-3456-7890**
+                    An. Admin Kantin
+                    """)
+
+                # 4. FORM PENGISIAN DATA (Di bawah info rekening)
                 with st.form("form_pesan"):
                     pemesan = st.text_input("Nama Pengirim")
                     untuk = st.text_input("Nama WBP (Penerima)")
                     wa = st.text_input("WhatsApp")
                     
-                    bayar = st.selectbox("Metode Pembayaran", ["Transfer Bank (BRI/BCA)", "E-Wallet (DANA/Gopay)"])
-                    
-                    st.info("ℹ️ Silakan Transfer ke: **BRI 1234-5678-900 (Koperasi)**")
-                    
-                    bukti_tf = st.file_uploader("📤 Upload Bukti Transfer (Wajib)", type=['jpg', 'png', 'jpeg'])
+                    # Upload Bukti
+                    st.write("**Bukti Transfer:**")
+                    bukti_tf = st.file_uploader("Upload Foto/Screenshot", type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
 
+                    st.markdown("---")
                     submit = st.form_submit_button("✅ KIRIM PESANAN", type="primary")
                     
                     if submit:
@@ -315,6 +332,7 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
