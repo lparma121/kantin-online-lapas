@@ -217,96 +217,97 @@ elif menu == "🛍️ Pesan Barang":
     # --- MEMBUAT TABS ---
     tab_menu, tab_checkout = st.tabs(["🍔 Pilih Menu", "💳 Pembayaran"])
 
-   # === TAB 1: ETALASE MENU ===
+   # === TAB 1: ETALASE MENU (Desain Mobile App) ===
     with tab_menu:
-        # --- FITUR PILIHAN UKURAN GRID ---
-        c_head, c_view = st.columns([2, 2])
-        with c_head:
-            st.header("🛍️ Etalase")
-        with c_view:
-            # Pilihan mode tampilan (Horizontal Radio Button)
-            mode_view = st.radio(
-                "Ukuran Tampilan:", 
-                ["Kecil (4)", "Sedang (3)", "Besar (2)"], 
-                horizontal=True,
-                index=1, # Default Sedang
-                label_visibility="collapsed" # Sembunyikan label agar rapi
-            )
+        # --- CSS KHUSUS AGAR GAMBAR RAPI DI HP ---
+        st.markdown("""
+        <style>
+            /* Memaksa gambar menjadi rasio kotak (Square) & Ujung tumpul */
+            div[data-testid="stImage"] img {
+                height: 150px !important; /* Tinggi gambar fix */
+                object-fit: cover !important; /* Potong gambar biar pas */
+                border-radius: 10px 10px 0 0 !important;
+            }
+            
+            /* Desain Kartu Produk */
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                background-color: white;
+                border-radius: 10px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                padding: 10px !important;
+                margin-bottom: 10px;
+            }
+            
+            /* Mengecilkan font nama barang di HP */
+            .nama-produk {
+                font-size: 14px;
+                font-weight: bold;
+                line-height: 1.2;
+                height: 35px; /* Batasi tinggi teks 2 baris */
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                margin-bottom: 5px;
+            }
+        </style>
+        """, unsafe_allow_html=True)
 
-        # Logika menentukan jumlah kolom berdasarkan pilihan
-        if "Kecil" in mode_view:
-            jml_kolom = 4
-        elif "Sedang" in mode_view:
-            jml_kolom = 3
-        else:
-            jml_kolom = 2
-
+        st.header("🛍️ Etalase")
+        
         # Ambil data barang
         res_b = supabase.table("barang").select("*").gt("stok", 0).order('nama_barang').execute()
         items = res_b.data
         
         if items:
-            # Buat kolom dinamis sesuai pilihan user
-            cols = st.columns(jml_kolom)
+            # KITA KUNCI JADI 2 KOLOM (Standar Aplikasi HP)
+            # Jangan pakai 3 atau 4, itu terlalu kecil untuk jari tangan di HP
+            cols = st.columns(2) 
             
             for i, item in enumerate(items):
-                # i % jml_kolom memastikan kartu masuk ke kolom yang benar secara berurutan
-                with cols[i % jml_kolom]:
+                with cols[i % 2]:
+                    # Container Border = True (Efek Kartu)
                     with st.container(border=True):
-                        # Gambar
+                        
+                        # 1. GAMBAR
                         img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
                         st.image(img, use_container_width=True)
                         
-                        # Jika tampilan KECIL, font nama barang dikecilkan sedikit agar muat
-                        if jml_kolom == 4:
-                            st.markdown(f"<div style='font-size:12px; font-weight:bold; height:40px; overflow:hidden;'>{item['nama_barang']}</div>", unsafe_allow_html=True)
-                            st.caption(f"{format_rupiah(item['harga'])}")
-                        else:
-                            st.write(f"**{item['nama_barang']}**")
-                            st.caption(f"{format_rupiah(item['harga'])}")
-                            st.caption(f"Stok: {item['stok']}")
+                        # 2. NAMA & HARGA (Pakai HTML biar font pas di HP)
+                        st.markdown(f"""
+                        <div class="nama-produk">{item['nama_barang']}</div>
+                        <div style="color:#d9534f; font-weight:bold; font-size:13px;">{format_rupiah(item['harga'])}</div>
+                        <div style="font-size:11px; color:grey;">Stok: {item['stok']}</div>
+                        """, unsafe_allow_html=True)
                         
-                        # Hitung Jumlah di Keranjang
+                        # 3. TOMBOL (+ -)
+                        # Hitung keranjang
                         qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
                         
-                        # --- LOGIKA TOMBOL (+ -) ---
-                        # Jika tampilan KECIL, tombol dibuat tumpuk (vertikal) atau sederhana agar muat
-                        if jml_kolom == 4:
-                            # Tampilan Mini: Hanya tombol Plus/Minus kecil
-                            c_min, c_val, c_plus = st.columns([1, 1, 1])
-                            with c_min:
-                                if st.button("−", key=f"min_{item['id']}"): # Pakai simbol minus unicode biar tipis
-                                    if qty_di_keranjang > 0:
-                                        kurangi_dari_keranjang(item['nama_barang'])
-                                        st.rerun()
-                            with c_val:
-                                st.markdown(f"<div style='text-align:center; font-weight:bold;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
-                            with c_plus:
-                                if st.button("+", key=f"plus_{item['id']}"):
-                                    if qty_di_keranjang < item['stok']:
-                                        tambah_ke_keranjang(item['nama_barang'], item['harga'])
-                                        st.rerun()
-                        else:
-                            # Tampilan Normal (Sedang/Besar)
-                            c_min, c_val, c_plus = st.columns([1, 1, 1])
-                            with c_min:
-                                if st.button("➖", key=f"min_{item['id']}"):
-                                    if qty_di_keranjang > 0:
-                                        kurangi_dari_keranjang(item['nama_barang'])
-                                        st.rerun()
-                            with c_val:
-                                st.markdown(f"<div class='qty-display'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
-                            with c_plus:
-                                if st.button("➕", key=f"plus_{item['id']}"):
-                                    if qty_di_keranjang < item['stok']:
-                                        tambah_ke_keranjang(item['nama_barang'], item['harga'])
-                                        st.rerun()
-                                    else:
-                                        st.toast("Stok Habis!", icon="⚠️")
+                        c_min, c_val, c_plus = st.columns([1, 1, 1])
+                        
+                        with c_min:
+                            # Tombol Minus Tipis
+                            if st.button("−", key=f"min_{item['id']}"): 
+                                if qty_di_keranjang > 0:
+                                    kurangi_dari_keranjang(item['nama_barang'])
+                                    st.rerun()
+                        
+                        with c_val:
+                            # Angka ditengah
+                            st.markdown(f"<div style='text-align:center; font-weight:bold; padding-top:5px;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
+                        
+                        with c_plus:
+                            # Tombol Plus Tebal
+                            if st.button("➕", key=f"plus_{item['id']}"):
+                                if qty_di_keranjang < item['stok']:
+                                    tambah_ke_keranjang(item['nama_barang'], item['harga'])
+                                    st.rerun()
+                                else:
+                                    st.toast("Stok Habis!", icon="⚠️")
             
             # Spasi bawah agar tidak tertutup floating bar
-            st.write("\n" * 5)
-
+            st.write("\n" * 6)
     # === TAB 2: CHECKOUT / PEMBAYARAN ===
     with tab_checkout:
         st.header("📝 Konfirmasi Pesanan")
@@ -487,6 +488,7 @@ elif menu == "🔍 Lacak Pesanan":
             # Jika dicari tapi tidak ketemu
             if resi_input: 
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
