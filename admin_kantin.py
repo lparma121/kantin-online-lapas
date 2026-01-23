@@ -302,22 +302,23 @@ elif menu_admin == "📋 Daftar Pesanan":
             else:
                 st.info("Belum ada riwayat selesai.")
 
-      # TAB 4: RIWAYAT PEMBATALAN & CEK VOUCHER (DENGAN BUKTI TF)
+      # TAB 4: RIWAYAT PEMBATALAN & CEK VOUCHER (ANTI-FRAUD)
         with tab4:
-            st.header("🎫 Cek Validitas Voucher & Bukti Transfer")
+            st.header("🎫 Audit Keamanan Voucher")
             
-            # FITUR PENCARIAN
+            st.error("""
+            🛑 **PENTING UNTUK ADMIN:**
+            Sebelum menerima Voucher, **WAJIB CEK 'BUKTI TF ASLI'** di kolom kanan!
+            Jangan terima Voucher jika Pesanan Asalnya ternyata **struk palsu/sampah**, meskipun status Vouchernya Aktif.
+            """)
+            
             c_cek, c_info = st.columns([3, 1])
             with c_cek:
-                cek_kode = st.text_input("🔍 Masukkan Kode Resi / Kode Voucher")
-            with c_info:
-                st.info("Cek bukti transfer asli sebelum klaim voucher.")
+                cek_kode = st.text_input("🔍 Scan Kode Resi / Voucher")
 
-            # QUERY DATA
             query = supabase.table("pesanan").select("*").in_("status", ["Dibatalkan", "Voucher Sudah Dipakai"]).order("id", desc=True)
             
             if cek_kode:
-                # Bersihkan input (jika user ketik REF-...)
                 bersih_kode = cek_kode.replace("REF-", "").strip()
                 query = query.eq("no_resi", bersih_kode)
             
@@ -325,48 +326,54 @@ elif menu_admin == "📋 Daftar Pesanan":
             items = res_batal.data
 
             if not items:
-                st.info("Belum ada data voucher/pembatalan.")
+                st.info("Data tidak ditemukan.")
             else:
                 for d in items:
-                    # TENTUKAN WARNA & STATUS
+                    # LOGIKA WARNA STATUS
                     if d['status'] == "Dibatalkan":
-                        status_text = "VOUCHER AKTIF (Bisa Dipakai)"
-                        warna_status = "green"
-                        icon = "✅"
+                        status_text = "VOUCHER BELUM DIPAKAI"
+                        bg_color = "#e6fffa" # Hijau muda
+                        border_color = "green"
                     else:
-                        status_text = "SUDAH TERPAKAI (Tidak Berlaku)"
-                        warna_status = "red"
-                        icon = "❌"
+                        status_text = "SUDAH TERPAKAI"
+                        bg_color = "#fff5f5" # Merah muda
+                        border_color = "red"
                     
-                    with st.container(border=True):
-                        # BAGI JADI 2 KOLOM (Kiri: Data, Kanan: Foto)
-                        col_data, col_foto = st.columns([2, 1])
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="border: 2px solid {border_color}; padding: 10px; border-radius: 10px; background-color: {bg_color}; margin-bottom: 10px;">
+                            <h3 style="margin:0;">{d['no_resi']}</h3>
+                            <b>STATUS: {status_text}</b>
+                        </div>
+                        """, unsafe_allow_html=True)
                         
-                        # --- KOLOM 1: DATA VOUCHER ---
-                        with col_data:
-                            st.markdown(f"### {icon} {d['no_resi']}")
-                            st.markdown(f"**Status:** :{warna_status}[**{status_text}**]")
-                            st.write(f"**Pemilik:** {d['nama_pemesan']} ({d['untuk_siapa']})")
-                            st.caption(f"No WA: {d.get('nomor_wa', '-')}")
+                        col_kiri, col_kanan = st.columns([1.5, 1])
+                        
+                        # DATA PESANAN
+                        with col_kiri:
+                            st.write(f"👤 **Pemilik:** {d['nama_pemesan']}")
+                            st.write(f"📦 **Item Asli:** `{d['item_pesanan']}`")
+                            st.caption(f"📅 Tanggal: {d.get('created_at', '-')[:16]}")
                             
-                            st.code(f"Item Asli: {d['item_pesanan']}")
-                            
-                            # TOMBOL AKSI (HANYA MUNCUL JIKA STATUS MASIH AKTIF)
+                            # TOMBOL EKSEKUSI
                             if d['status'] == "Dibatalkan":
-                                st.divider()
-                                st.info("👉 Jika user belanja lagi pakai voucher ini, klik tombol di bawah:")
-                                if st.button("Tandai Voucher Terpakai", key=f"claim_{d['id']}", type="primary"):
+                                st.write("---")
+                                st.markdown("**👇 TINDAKAN ADMIN:**")
+                                st.write("Pastikan uang pesanan ini MASUK sebelum klik tombol ini.")
+                                if st.button("✅ SAHKAN & TANDAI TERPAKAI", key=f"claim_{d['id']}", type="primary"):
                                     supabase.table("pesanan").update({"status": "Voucher Sudah Dipakai"}).eq("id", d['id']).execute()
-                                    st.success("Voucher berhasil diklaim!")
+                                    st.success("Voucher berhasil divalidasi!")
                                     time.sleep(1)
                                     st.rerun()
 
-                        # --- KOLOM 2: BUKTI TRANSFER ASLI ---
-                        with col_foto:
-                            st.write("**Bukti Transfer Awal:**")
+                        # BUKTI TRANSFER (THE MOMENT OF TRUTH)
+                        with col_kanan:
+                            st.write("🔍 **BUKTI TRANSFER ASAL:**")
                             if d.get('bukti_transfer'):
-                                st.image(d['bukti_transfer'], caption="Foto TF Asli", use_container_width=True)
-                                st.link_button("🔍 Lihat Full", d['bukti_transfer'])
+                                st.image(d['bukti_transfer'], use_container_width=True)
+                                st.caption("👆 Cek gambar ini! Asli atau Palsu?")
                             else:
-                                st.error("❌ Tidak ada bukti transfer")
-                                st.caption("Hati-hati, pesanan ini mungkin batal karena tidak bayar.")
+                                st.error("❌ TIDAK ADA BUKTI TRANSFER!")
+                                st.error("JANGAN TERIMA VOUCHER INI!")
+                        
+                        st.divider()
