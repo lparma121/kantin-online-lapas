@@ -182,30 +182,64 @@ if menu == "🏠 Beranda":
     st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
-# 2. PESAN BARANG
+# 2. PESAN BARANG (MODEL TABS UNTUK HP)
 # =========================================
 elif menu == "🛍️ Pesan Barang":
-    col_etalase, col_checkout = st.columns([2.5, 1.2], gap="large")
+    # Hitung total duit dulu untuk keperluan floating bar
+    total_duit = sum(i['harga'] for i in st.session_state.keranjang)
+    
+    # --- CSS UNTUK FLOATING BAR (TOTAL HARGA MELAYANG DI BAWAH) ---
+    if total_duit > 0:
+        st.markdown(f"""
+        <style>
+            .floating-total {{
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: #ffffff;
+                padding: 15px;
+                border-top: 3px solid #00AAFF;
+                box-shadow: 0px -4px 10px rgba(0,0,0,0.1);
+                z-index: 99999;
+                text-align: center;
+                font-size: 18px;
+                font-weight: bold;
+                color: #333;
+            }}
+        </style>
+        <div class="floating-total">
+            🛒 Total: {format_rupiah(total_duit)} <br>
+            <span style="font-size:12px; font-weight:normal; color: #555;">(Klik Tab '💳 Pembayaran' di atas untuk lanjut)</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-    with col_etalase:
-        st.title("🛍️ Etalase Menu")
+    # --- MEMBUAT TABS ---
+    tab_menu, tab_checkout = st.tabs(["🍔 Pilih Menu", "💳 Pembayaran"])
+
+    # === TAB 1: ETALASE MENU ===
+    with tab_menu:
+        st.header("🛍️ Etalase Menu")
         res_b = supabase.table("barang").select("*").gt("stok", 0).order('nama_barang').execute()
         items = res_b.data
+        
         if items:
-            cols = st.columns(3)
+            # Gunakan CSS Grid agar tampilan kartu rapi di HP
+            cols = st.columns(2) # 2 Kolom di HP biar tidak terlalu kecil
             for i, item in enumerate(items):
-                with cols[i % 3]:
+                with cols[i % 2]:
                     with st.container(border=True):
                         # Gambar
                         img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
                         st.image(img, use_container_width=True)
                         st.write(f"**{item['nama_barang']}**")
-                        st.caption(f"{format_rupiah(item['harga'])} | Stok: {item['stok']}")
+                        st.caption(f"{format_rupiah(item['harga'])}")
+                        st.caption(f"Stok: {item['stok']}")
                         
                         # Hitung Jumlah di Keranjang
                         qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
                         
-                        # Tombol - 0 +
+                        # Tombol - Angka - +
                         c_min, c_val, c_plus = st.columns([1, 1, 1])
                         
                         with c_min:
@@ -224,15 +258,19 @@ elif menu == "🛍️ Pesan Barang":
                                     st.rerun()
                                 else:
                                     st.toast("Stok Habis!", icon="⚠️")
+            
+            # Tambah spasi di bawah agar tidak tertutup floating bar
+            st.write("\n" * 5) 
 
-    with col_checkout:
-        st.header("📝 Checkout")
+    # === TAB 2: CHECKOUT / PEMBAYARAN ===
+    with tab_checkout:
+        st.header("📝 Konfirmasi Pesanan")
         
         if not st.session_state.keranjang:
-            st.info("Keranjang kosong. Silakan pilih menu di sebelah kiri.")
+            st.info("Keranjang masih kosong. Silakan pilih menu di Tab sebelah.")
         else:
             with st.container(border=True):
-                st.write("**Rincian Pesanan:**")
+                st.write("**Rincian Barang:**")
                 item_counts = {}
                 item_prices = {}
                 for x in st.session_state.keranjang:
@@ -241,37 +279,39 @@ elif menu == "🛍️ Pesan Barang":
                 
                 for nama, qty in item_counts.items():
                     subtotal = qty * item_prices[nama]
-                    st.caption(f"- {qty}x {nama} ({format_rupiah(subtotal)})")
+                    st.write(f"• {qty}x {nama} = **{format_rupiah(subtotal)}**")
                 
                 st.divider()
-                total_duit = sum(i['harga'] for i in st.session_state.keranjang)
-                st.markdown(f"### Total: {format_rupiah(total_duit)}")
+                st.markdown(f"### Total Bayar: {format_rupiah(total_duit)}")
                 st.divider()
 
-                st.write("**Pilih Metode Pembayaran:**")
-                bayar = st.selectbox("Metode", ["Transfer Bank (BRI/BCA)", "E-Wallet (DANA/Gopay)"], label_visibility="collapsed")
+                st.write("**Metode Pembayaran:**")
+                bayar = st.selectbox("Pilih Bank/E-Wallet", ["Transfer Bank (BRI/BCA)", "E-Wallet (DANA/Gopay)"], label_visibility="collapsed")
                 
                 if "Transfer Bank" in bayar:
-                    st.info("""
-                    🏦 **Transfer Bank BRI**
+                    st.warning("""
+                    🏦 **Bank BRI**
                     No. Rek: **1234-5678-900**
                     An. Koperasi Lapas
                     """)
                 else:
-                    st.info("""
-                    📱 **E-Wallet (DANA/Gopay)**
+                    st.warning("""
+                    📱 **DANA / Gopay**
                     Nomor: **0812-3456-7890**
                     An. Admin Kantin
                     """)
 
+                st.write("**Data Pemesan:**")
                 with st.form("form_pesan"):
-                    pemesan = st.text_input("Nama Pengirim")
+                    pemesan = st.text_input("Nama Pengirim (Keluarga)")
                     untuk = st.text_input("Nama WBP (Penerima)")
-                    wa = st.text_input("WhatsApp")
-                    st.write("**Bukti Transfer:**")
-                    bukti_tf = st.file_uploader("Upload Foto/Screenshot", type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
+                    wa = st.text_input("Nomor WhatsApp Aktif")
+                    
+                    st.write("**Upload Bukti Transfer:**")
+                    bukti_tf = st.file_uploader("Upload Foto", type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
+                    
                     st.markdown("---")
-                    submit = st.form_submit_button("✅ KIRIM PESANAN", type="primary")
+                    submit = st.form_submit_button("✅ KIRIM PESANAN SEKARANG", type="primary")
                     
                 if submit:
                     if pemesan and untuk and wa and bukti_tf:
@@ -302,6 +342,7 @@ elif menu == "🛍️ Pesan Barang":
                         }
                         supabase.table("pesanan").insert(data_db).execute()
                         
+                        # Kurangi Stok
                         for item_name in item_counts:
                             qty_to_reduce = item_counts[item_name]
                             cur = supabase.table("barang").select("stok").eq("nama_barang", item_name).execute()
@@ -381,3 +422,4 @@ elif menu == "🔍 Lacak Pesanan":
                             
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
