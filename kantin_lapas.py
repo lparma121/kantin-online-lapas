@@ -64,7 +64,7 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     black = (0, 0, 0)
     gray = (100, 100, 100)
     
-    d.text((160, 20), "KANTIN LAPAS ONLINE", fill=black)
+    d.text((160, 20), "e-PAS Mart Lapas Arga Makmur", fill=black)
     d.text((150, 40), "Bukti Transaksi Resmi", fill=gray)
     d.line((20, 70, 480, 70), fill=black, width=2)
     
@@ -451,8 +451,34 @@ elif menu == "🛍️ Pesan Barang":
                 st.write("**Data Pemesan:**")
                 with st.form("form_pesan"):
                     pemesan = st.text_input("Nama Pengirim (Keluarga)")
-                    untuk = st.text_input("Nama WBP (Penerima)")
+                    
+                    # --- PERUBAHAN DI SINI (MODIFIKASI NAMA WBP) ---
+                    untuk = st.text_input(
+                        "Nama WBP (Penerima) + Bin/Binti", 
+                        placeholder="Contoh: Ali bin Abu Talib",
+                        help="WAJIB menyertakan nama ayah (Bin/Binti) agar pesanan tidak salah kamar/orang."
+                    )
+                    # -----------------------------------------------
+                    
                     wa = st.text_input("Nomor WhatsApp Aktif")
+                    
+                    # UBAH LABEL SEDIKIT AGAR LEBIH JELAS
+                    label_upload = "Upload Bukti Transfer / Gambar Voucher"
+                    st.write(f"**{label_upload}:**")
+                    bukti_tf = st.file_uploader(label_upload, type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
+                    
+                    st.markdown("---")
+                    
+                    # Tambahkan validasi sederhana saat tombol ditekan
+                    submit = st.form_submit_button("✅ KIRIM PESANAN SEKARANG", type="primary")
+
+                    # --- LOGIKA PENGECEKAN BIN/BINTI ---
+                    if submit:
+                        # Cek apakah kolom nama WBP mengandung kata 'bin' atau 'binti' (tidak case sensitive)
+                        nama_cek = untuk.lower()
+                        if "bin" not in nama_cek and "binti" not in nama_cek:
+                            st.error("⚠️ Mohon sertakan 'Bin' atau 'Binti' pada nama WBP agar tidak salah orang!")
+                            st.stop() # Hentikan proses jika tidak ada bin
                     
                     # UBAH LABEL SEDIKIT AGAR LEBIH JELAS
                     label_upload = "Upload Bukti Transfer / Gambar Voucher"
@@ -616,6 +642,7 @@ elif menu == "🔍 Lacak Pesanan":
                         
                     except Exception as e:
                         st.error(f"Gagal membatalkan. Error: {e}")
+
 
 
 
