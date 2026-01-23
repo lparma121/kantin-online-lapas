@@ -452,71 +452,84 @@ elif menu == "🛍️ Pesan Barang":
                 with st.form("form_pesan"):
                     pemesan = st.text_input("Nama Pengirim (Keluarga)")
                     
-                    # --- PERUBAHAN DI SINI (MODIFIKASI NAMA WBP) ---
+                    # Kolom Nama WBP (Wajib Bin/Binti)
                     untuk = st.text_input(
                         "Nama WBP (Penerima) + Bin/Binti", 
                         placeholder="Contoh: Ali bin Abu Talib",
                         help="WAJIB menyertakan nama ayah (Bin/Binti) agar pesanan tidak salah kamar/orang."
                     )
-                    # -----------------------------------------------
                     
                     wa = st.text_input("Nomor WhatsApp Aktif")
                     
                     # UBAH LABEL SEDIKIT AGAR LEBIH JELAS
                     label_upload = "Upload Bukti Transfer / Gambar Voucher"
                     st.write(f"**{label_upload}:**")
-                    bukti_tf = st.file_uploader(label_upload, type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
+                    
+                    # --- PERBAIKAN ERROR DI SINI (TAMBAHKAN KEY UNIK) ---
+                    bukti_tf = st.file_uploader(
+                        label_upload, 
+                        type=['jpg', 'png', 'jpeg'], 
+                        label_visibility="collapsed",
+                        key="upload_bukti_fix"  # <--- INI KUNCI PERBAIKANNYA
+                    )
+                    # ----------------------------------------------------
                     
                     st.markdown("---")
                     
-                    # Tambahkan validasi sederhana saat tombol ditekan
+                    # Tombol Submit
                     submit = st.form_submit_button("✅ KIRIM PESANAN SEKARANG", type="primary")
 
-                    # --- LOGIKA PENGECEKAN BIN/BINTI ---
+                    # --- LOGIKA PENGECEKAN & SIMPAN ---
                     if submit:
-                        # Cek apakah kolom nama WBP mengandung kata 'bin' atau 'binti' (tidak case sensitive)
+                        # 1. Validasi Nama Bin/Binti
                         nama_cek = untuk.lower()
                         if "bin" not in nama_cek and "binti" not in nama_cek:
                             st.error("⚠️ Mohon sertakan 'Bin' atau 'Binti' pada nama WBP agar tidak salah orang!")
-                            st.stop() # Hentikan proses jika tidak ada bin
-                    
-                    # UBAH LABEL SEDIKIT AGAR LEBIH JELAS
-                    label_upload = "Upload Bukti Transfer / Gambar Voucher"
-                    st.write(f"**{label_upload}:**")
-                    bukti_tf = st.file_uploader(label_upload, type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
-                    
-                    st.markdown("---")
-                    submit = st.form_submit_button("✅ KIRIM PESANAN SEKARANG", type="primary")
-                    
-                if submit:
-                    if pemesan and untuk and wa and bukti_tf:
-                        no_resi = generate_resi()
-                        file_bukti = bukti_tf.getvalue()
-                        url_bukti = upload_file(file_bukti, "bukti_transfer", f"tf_{no_resi}.jpg")
+                            st.stop() # Stop proses
                         
-                        file_nota = buat_struk_image(
-                            {"nama_pemesan": pemesan, "untuk_siapa": untuk}, 
-                            st.session_state.keranjang, 
-                            total_duit, 
-                            no_resi
-                        )
-                        url_nota = upload_file(file_nota, "nota", f"nota_{no_resi}.jpg")
-                        
-                        list_items_str = []
-                        for nama, qty in item_counts.items():
-                            list_items_str.append(f"{qty}x {nama}")
-                        final_items_str = ", ".join(list_items_str)
-                        
-                        data_db = {
-                            "nama_pemesan": pemesan, "untuk_siapa": untuk,
-                            "item_pesanan": final_items_str, "cara_bayar": bayar,
-                            "status": "Menunggu Verifikasi", "nomor_wa": wa,
-                            "no_resi": no_resi,
-                            "bukti_transfer": url_bukti,
-                            "nota_url": url_nota
-                        }
-                        supabase.table("pesanan").insert(data_db).execute()
-                        
+                        # 2. Validasi Lainnya (Nama Pengirim & Bukti)
+                        if not pemesan or not wa:
+                            st.warning("⚠️ Harap lengkapi Nama Pengirim dan Nomor WhatsApp.")
+                            st.stop()
+                            
+                        if not bukti_tf:
+                            st.warning("⚠️ Anda belum mengupload Bukti Transfer / Gambar Voucher.")
+                            st.stop()
+                            
+                        # ... (Lanjutkan logika simpan ke database di bawah ini) ...
+                        # Pastikan kode di bawah ini menyambung dengan logika upload & insert supabase Anda sebelumnya
+                        # Contoh singkatnya:
+                        try:
+                            # Upload Bukti
+                            file_bytes = kompres_gambar(bukti_tf)
+                            nama_file = f"tf_{int(time.time())}"
+                            path = f"bukti_transfer/{nama_file}.jpg"
+                            supabase.storage.from_("KANTIN-ASSETS").upload(path, file_bytes, {"content-type": "image/jpeg"})
+                            url_bukti = supabase.storage.from_("KANTIN-ASSETS").get_public_url(path)
+                            
+                            # Insert Data Pesanan
+                            item_str = ", ".join([f"{item['qty']}x {item['nama']}" for item in st.session_state['keranjang']])
+                            total_belanja = sum([item['harga'] * item['qty'] for item in st.session_state['keranjang']])
+                            
+                            # Buat No Resi
+                            import random, string
+                            kode_unik = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+                            no_resi = f"KANTIN-{int(time.time())}-{kode_unik}"
+                            
+                            data_insert = {
+                                "nama_pemesan": pemesan,
+                                "untuk_siapa": untuk, # Nama WBP sudah ada Bin/Bintinya
+                                "nomor_wa": wa,
+                                "item_pesanan": item_str,
+                                "total_harga": total_belanja,
+                                "bukti_transfer": url_bukti,
+                                "status": "Menunggu Verifikasi",
+                                "cara_bayar": bayar,
+                                "no_resi": no_resi
+                            }
+                            
+                            supabase.table("pesanan").insert(data_insert).execute()
+                                                    
                         # Kurangi Stok
                         for item_name in item_counts:
                             qty_to_reduce = item_counts[item_name]
@@ -642,6 +655,7 @@ elif menu == "🔍 Lacak Pesanan":
                         
                     except Exception as e:
                         st.error(f"Gagal membatalkan. Error: {e}")
+
 
 
 
