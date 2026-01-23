@@ -180,7 +180,7 @@ if filter_data:
     st.info(f"🔍 Hasil Pencarian Resi: **{cari_resi}**")
     data_pesanan = filter_data
 else:
-    res_p = supabase.table("pesanan").select("*").neq("status", "Selesai").order("id", desc=True).execute()
+    res_p = supabase.table("pesanan").select("*").neq("status", "Selesai").neq("status", "Dibatalkan")
     data_pesanan = res_p.data
 
 if data_pesanan:
