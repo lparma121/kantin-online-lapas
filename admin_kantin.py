@@ -297,6 +297,7 @@ elif menu_admin == "📋 Daftar Pesanan":
                                 st.link_button("🔍 Zoom Gambar", p['bukti_transfer'])
                             else:
                                 st.error("❌ TIDAK ADA BUKTI")
+                                st.caption("Hati-hati penipuan!") 
                         
                         # KOLOM 2: DETAIL PESANAN
                         with cols[1]:
