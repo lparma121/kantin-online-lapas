@@ -61,7 +61,7 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     gray = (100, 100, 100)
     
     # Header
-    d.text((160, 20), "KANTIN LAPAS ONLINE", fill=black, align="center")
+    d.text((160, 20), "e-PAS Mart (Elektronik Pemasyarakatan Mart)", fill=black, align="center")
     d.text((150, 40), "Bukti Transaksi Resmi", fill=gray, align="center")
     d.line((20, 70, 480, 70), fill=black, width=2)
     
@@ -147,7 +147,7 @@ if menu == "🏠 Beranda":
         # Gambar masuk di tengah
         st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
     
-    st.title("Selamat Datang di e-PAS Mart (Elektronik Pemasyarakatan Mart) Lapas Arga Makmur")
+    st.title("Selamat Datang di e-PAS Mart")
     st.markdown("### *Aman, Cepat, dan Transparan.*")
     
     c1, c2, c3 = st.columns(3)
@@ -283,6 +283,7 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
