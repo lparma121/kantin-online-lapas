@@ -137,23 +137,61 @@ menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "�
 # =========================================
 # 1. HALAMAN BERANDA
 # =========================================
+# =========================================
+# 1. HALAMAN BERANDA (UPDATE TEKS BARU)
+# =========================================
 if menu == "🏠 Beranda":
-    # KITA GUNAKAN 3 KOLOM: 
-    # Kolom kiri & kanan kosong, kolom tengah isi gambar
-    # Angka [1, 2, 1] berarti kolom tengah 2x lebih lebar dari sisi-sisinya
+    # --- BANNER FOTO (Kecil di Tengah) ---
     c_kiri, c_tengah, c_kanan = st.columns([1, 2, 1])
-    
     with c_tengah:
-        # Gambar masuk di tengah
         st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
     
-    st.title("Selamat Datang di e-PAS Mart")
-    st.markdown("### *Aman, Cepat, dan Transparan.*")
+    # --- JUDUL UTAMA ---
+    st.markdown("<h1 style='text-align: center;'>e-PAS Mart Lapas Arga Makmur</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #555;'>Belanja Aman, Transparan, dan Tanpa Uang Tunai</h3>", unsafe_allow_html=True)
     
-    c1, c2, c3 = st.columns(3)
-    with c1: st.info("📦 **Stok Terjamin**")
-    with c2: st.success("⚡ **Proses Cepat**")
-    with c3: st.warning("🛡️ **Transparan**")
+    st.write("") # Jarak spasi
+
+    # --- INTRO ---
+    st.markdown("""
+    <div style='text-align: center;'>
+        Selamat datang di era baru pelayanan Lapas Arga Makmur melalui <b>e-PAS Mart</b>.<br>
+        Kami menghadirkan sistem kantin digital yang cerdas untuk kenyamanan dan keamanan bersama.
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    # --- INFO CASHLESS ---
+    st.info("💡 **Mengapa e-PAS Mart berbeda?** Karena kami menerapkan prinsip **100% Cashless (Non-Tunai)**.")
+
+    # --- KEUNGGULAN (DIBUAT 3 KOLOM AGAR RAPI) ---
+    st.subheader("✨ Keunggulan e-PAS Mart")
+    
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        with st.container(border=True):
+            st.markdown("### 💳")
+            st.markdown("**Sistem Pembayaran Digital**")
+            st.caption("Tidak ada lagi uang fisik yang beredar. Warga Binaan menggunakan kartu khusus/saldo virtual untuk bertransaksi.")
+
+    with col2:
+        with st.container(border=True):
+            st.markdown("### 🛡️")
+            st.markdown("**Cegah Pungli & Aman**")
+            st.caption("Tanpa uang tunai, potensi penyimpangan dan kejahatan di dalam Lapas dapat diminimalisir secara signifikan.")
+
+    with col3:
+        with st.container(border=True):
+            st.markdown("### 📝")
+            st.markdown("**Tercatat & Terpantau**")
+            st.caption("Keluarga di rumah lebih tenang karena dana terpantau jelas penggunaannya untuk kebutuhan sehari-hari WBP.")
+
+    st.write("") # Spasi
+
+    # --- PENUTUP ---
+    st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
 # 2. PESAN BARANG (UPLOAD BUKTI & RESI)
@@ -283,6 +321,7 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
