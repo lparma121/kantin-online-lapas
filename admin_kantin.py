@@ -94,4 +94,165 @@ with tab1:
                 with st.form("edit_form"):
                     c1, c2 = st.columns(2)
                     with c1:
-                        new_stok =
+                        new_stok = st.number_input("Update Stok", value=detail['stok'], min_value=0)
+                        new_harga = st.number_input("Update Harga (Rp)", value=int(detail.get('harga', 0)), min_value=0, step=500)
+                    with c2:
+                        st.markdown("**Ganti Foto (Otomatis Dikompres)**")
+                        uploaded_file = st.file_uploader("Upload File Baru", type=['png', 'jpg', 'jpeg'])
+                        url_manual = st.text_input("Atau Paste Link URL", value=detail.get('gambar_url', ""))
+
+                    if st.form_submit_button("💾 Simpan Perubahan"):
+                        update_data = {"stok": new_stok, "harga": new_harga}
+                        if uploaded_file:
+                            f_name = f"produk_{detail['id']}_{int(time.time())}"
+                            url_baru = upload_ke_supabase(uploaded_file, "produk", f_name)
+                            if url_baru: update_data["gambar_url"] = url_baru
+                        elif url_manual != detail.get('gambar_url'):
+                            update_data["gambar_url"] = url_manual
+                        
+                        supabase.table("barang").update(update_data).eq("id", detail['id']).execute()
+                        st.success("✅ Data berhasil diperbarui!")
+                        time.sleep(1)
+                        st.rerun()
+
+                with st.expander(f"🗑️ Hapus Menu '{detail['nama_barang']}'"):
+                    if st.button("Hapus Permanen", key="hapus_btn"):
+                        supabase.table("barang").delete().eq("id", detail['id']).execute()
+                        st.error("Produk dihapus.")
+                        time.sleep(1)
+                        st.rerun()
+
+# --- TAB 2: TAMBAH BARANG ---
+with tab2:
+    with st.form("add_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            nama_baru = st.text_input("Nama Produk")
+            harga_baru = st.number_input("Harga (Rp)", min_value=0, step=500, value=5000)
+        with c2:
+            stok_awal = st.number_input("Stok Awal", min_value=1, value=10)
+            img_file = st.file_uploader("Upload Foto", type=['png', 'jpg', 'jpeg'])
+            img_url_text = st.text_input("Atau Link URL")
+        
+        if st.form_submit_button("➕ Tambahkan"):
+            if nama_baru:
+                final_url = ""
+                if img_file:
+                    f_name = f"new_{int(time.time())}"
+                    final_url = upload_ke_supabase(img_file, "produk", f_name)
+                elif img_url_text:
+                    final_url = img_url_text
+                
+                new_data = {"nama_barang": nama_baru, "stok": stok_awal, "harga": harga_baru, "gambar_url": final_url}
+                supabase.table("barang").insert(new_data).execute()
+                st.success(f"🎉 {nama_baru} berhasil ditambahkan!")
+                time.sleep(1)
+                st.rerun()
+
+st.markdown("---")
+
+# =========================================
+# 2. ANTRIAN PESANAN (UPDATE FITUR BARU)
+# =========================================
+st.header("📋 Verifikasi & Proses Pesanan")
+
+if st.button("🔄 Refresh Data Pesanan"):
+    st.rerun()
+
+# LOGIKA DATA: Apakah pakai filter pencarian resi atau ambil semua yang belum selesai?
+if filter_data:
+    st.info(f"🔍 Menampilkan hasil pencarian untuk Resi: **{cari_resi}**")
+    data_pesanan = filter_data
+else:
+    # Ambil semua yang belum status 'Selesai', urutkan dari terbaru
+    res_p = supabase.table("pesanan").select("*").neq("status", "Selesai").order("id", desc=True).execute()
+    data_pesanan = res_p.data
+
+if data_pesanan:
+    for p in data_pesanan:
+        with st.container(border=True):
+            cols = st.columns([1, 2, 2])
+            
+            # --- KOLOM 1: INFO UTAMA ---
+            with cols[0]:
+                st.subheader(f"#{p['id']}")
+                st.caption(f"Resi: {p.get('no_resi', '-')}")
+                
+                # Warna Status
+                if p['status'] == "Menunggu Verifikasi":
+                    st.warning(f"⚠️ {p['status']}")
+                elif p['status'] == "Selesai":
+                    st.success(f"✅ {p['status']}")
+                else:
+                    st.info(f"⚡ {p['status']}")
+                
+                # TOMBOL LIHAT BUKTI TF
+                if p.get('bukti_transfer'):
+                    st.link_button("📄 Cek Bukti Transfer", p['bukti_transfer'])
+                else:
+                    st.error("Belum ada bukti TF")
+                    
+                # TOMBOL LIHAT NOTA
+                if p.get('nota_url'):
+                    st.link_button("🧾 Lihat Nota", p['nota_url'])
+
+            # --- KOLOM 2: DETAIL ---
+            with cols[1]:
+                st.write(f"**Pengirim:** {p['nama_pemesan']}")
+                st.write(f"**Penerima:** {p['untuk_siapa']}")
+                st.write(f"**Metode:** {p.get('cara_bayar', '-')}")
+                st.info(f"📦 Isi: {p['item_pesanan']}")
+
+            # --- KOLOM 3: AKSI ADMIN ---
+            with cols[2]:
+                with st.form(key=f"form_{p['id']}"):
+                    st.write("**Tindakan:**")
+                    
+                    # Logic dropdown index agar sesuai status sekarang
+                    opsi = ["Menunggu Verifikasi", "Pembayaran Valid (Diproses)", "Selesai"]
+                    idx = 0
+                    if p['status'] == "Pembayaran Valid (Diproses)": idx = 1
+                    elif p['status'] == "Selesai": idx = 2
+                    
+                    st_baru = st.selectbox("Update Status", opsi, index=idx, key=f"s_{p['id']}")
+                    
+                    # Hanya tampilkan kamera jika pilih SELESAI
+                    foto = None
+                    if st_baru == "Selesai":
+                        st.caption("Wajib ambil foto bukti penyerahan:")
+                        foto = st.camera_input("Kamera", key=f"c_{p['id']}")
+                    
+                    if st.form_submit_button("Simpan & Proses"):
+                        u_data = {"status": st_baru}
+                        
+                        if st_baru == "Selesai":
+                            if foto:
+                                # Upload BUKTI PENYERAHAN dengan Kompresi
+                                f_name = f"serah_{p['no_resi'] if p.get('no_resi') else p['id']}"
+                                url_foto = upload_ke_supabase(foto, "bukti_serah", f_name)
+                                
+                                if url_foto:
+                                    u_data["foto_penerima"] = url_foto
+                                    supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                                    
+                                    # Kirim WA
+                                    no_hp = p['nomor_wa']
+                                    if no_hp.startswith('0'): no_hp = '62' + no_hp[1:]
+                                    resi_teks = p.get('no_resi', f"#{p['id']}")
+                                    msg = f"Halo, Pesanan dengan Resi {resi_teks} SUDAH DITERIMA oleh {p['untuk_siapa']}. Terima kasih."
+                                    link_wa = f"https://wa.me/{no_hp}?text={msg.replace(' ', '%20')}"
+                                    
+                                    st.success("✅ Pesanan Selesai & Foto Terupload!")
+                                    st.link_button("📲 Kabari via WA", link_wa)
+                                else:
+                                    st.error("Gagal upload foto.")
+                            else:
+                                st.error("⚠️ Foto penyerahan wajib diambil!")
+                        else:
+                            # Update status biasa (misal verifikasi pembayaran)
+                            supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                            st.success(f"Status diubah menjadi: {st_baru}")
+                            time.sleep(1)
+                            st.rerun()
+else:
+    st.info("✅ Tidak ada antrian pesanan.")
