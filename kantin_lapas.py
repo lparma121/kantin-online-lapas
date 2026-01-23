@@ -12,6 +12,10 @@ KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
 st.set_page_config(page_title="e-PAS Mart | Belanja Cepat & Aman", page_icon="🛍️", layout="wide")
+# === TAMBAHKAN KODE INI DI SINI (TEPAT DI BAWAH set_page_config) ===
+# Ini adalah titik tujuan saat tombol diklik (Invisible Target)
+st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
+# ===================================================================
 
 # --- CSS CUSTOM ---
 st.markdown("""
@@ -522,6 +526,7 @@ elif menu == "🔍 Lacak Pesanan":
             # Jika dicari tapi tidak ketemu
             if resi_input: 
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
