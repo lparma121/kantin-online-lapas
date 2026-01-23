@@ -409,61 +409,84 @@ elif menu == "🛍️ Pesan Barang":
                         st.error("Mohon lengkapi semua data & upload bukti transfer!")
 
 # =========================================
-# 3. LACAK PESANAN (FITUR BATALKAN PESANAN)
+# 3. LACAK PESANAN (PERBAIKAN LOGIKA TOMBOL)
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Status Pesanan")
+    
+    # 1. Input Resi
     resi_input = st.text_input("Masukkan Nomor Resi")
     
+    # 2. Tombol Cek (Simpan resi ke Session State agar tidak hilang saat refresh)
     if st.button("🔍 Cek Resi"):
-        if resi_input:
-            res = supabase.table("pesanan").select("*").eq("no_resi", resi_input).execute()
-            if res.data:
-                d = res.data[0]
-                st.success(f"Pesanan Ditemukan: {d['no_resi']}")
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.write(f"**Penerima:** {d['untuk_siapa']}")
-                    st.write(f"**Item:** {d['item_pesanan']}")
-                with c2:
-                    st.write(f"**Status Terkini:**")
-                    stat = d['status']
-                    val = 10 if stat == "Menunggu Verifikasi" else 50 if stat == "Pembayaran Valid (Diproses)" else 100
-                    st.progress(val, text=stat)
+        st.session_state['resi_aktif'] = resi_input
+    
+    # 3. Logika Tampilan (Berdasarkan Session State, bukan tombol Cek lagi)
+    if 'resi_aktif' in st.session_state and st.session_state['resi_aktif']:
+        resi_dicari = st.session_state['resi_aktif']
+        
+        # Ambil data dari database
+        res = supabase.table("pesanan").select("*").eq("no_resi", resi_dicari).execute()
+        
+        if res.data:
+            d = res.data[0]
+            st.success(f"Pesanan Ditemukan: {d['no_resi']}")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                st.write(f"**Penerima:** {d['untuk_siapa']}")
+                st.write(f"**Item:** {d['item_pesanan']}")
+            with c2:
+                st.write(f"**Status Terkini:**")
+                stat = d['status']
+                val = 10 if stat == "Menunggu Verifikasi" else 50 if stat == "Pembayaran Valid (Diproses)" else 100
+                st.progress(val, text=stat)
+            
+            if d['status'] == "Selesai" and d.get('foto_penerima'):
+                st.divider()
+                st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
+            
+            # --- FITUR BATALKAN PESANAN ---
+            if d['status'] == "Menunggu Verifikasi":
+                st.divider()
+                st.warning("⚠️ Pesanan ini belum diproses admin. Anda dapat membatalkannya.")
                 
-                if d['status'] == "Selesai" and d['foto_penerima']:
-                    st.divider()
-                    st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
-                
-                # --- FITUR BATALKAN PESANAN (VERSI UPDATE STATUS) ---
-                if d['status'] == "Menunggu Verifikasi":
-                    st.divider()
-                    st.warning("⚠️ Pesanan ini belum diproses admin. Anda dapat membatalkannya.")
-                    
-                    if st.button("❌ Batalkan Pesanan Ini", type="primary"):
-                        try:
-                            # 1. Kembalikan Stok (Sama seperti kode sebelumnya)
+                # Gunakan key unik agar tidak bentrok
+                if st.button("❌ Batalkan Pesanan Ini", type="primary", key="btn_batal"):
+                    try:
+                        # 1. Kembalikan Stok Barang
+                        if d.get('item_pesanan'):
                             items_list = d['item_pesanan'].split(", ")
                             for item_str in items_list:
+                                # Parsing format "2x Nasi Goreng"
                                 parts = item_str.split("x ", 1)
                                 if len(parts) == 2:
                                     qty_batal = int(parts[0])
                                     nama_batal = parts[1]
                                     
+                                    # Ambil stok sekarang
                                     curr = supabase.table("barang").select("stok").eq("nama_barang", nama_batal).execute()
                                     if curr.data:
                                         stok_skrg = curr.data[0]['stok']
+                                        # Update stok (+ qty_batal)
                                         supabase.table("barang").update({"stok": stok_skrg + qty_batal}).eq("nama_barang", nama_batal).execute()
-                            
-                            # 2. BUKAN DELETE, TAPI UPDATE STATUS JADI 'Dibatalkan'
-                            # Ini lebih mudah berhasil daripada delete jika ada masalah izin
-                            supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
-                            
-                            st.success("✅ Pesanan telah dibatalkan. Stok barang dikembalikan.")
-                            time.sleep(2)
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Gagal membatalkan: {e}")
+                        
+                        # 2. Update Status jadi 'Dibatalkan'
+                        supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
+                        
+                        st.success("✅ Pesanan berhasil dibatalkan. Stok barang telah dikembalikan.")
+                        
+                        # Hapus session state agar tampilan kereset
+                        del st.session_state['resi_aktif']
+                        time.sleep(2)
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Gagal membatalkan. Error: {e}")
+        else:
+            # Jika dicari tapi tidak ketemu
+            if resi_input: 
+                st.error("Nomor Resi tidak ditemukan.")
 
 
 
