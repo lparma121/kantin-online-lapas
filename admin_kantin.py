@@ -355,16 +355,32 @@ elif menu_admin == "📋 Daftar Pesanan":
                             st.write(f"📦 **Item Asli:** `{d['item_pesanan']}`")
                             st.caption(f"📅 Tanggal: {d.get('created_at', '-')[:16]}")
                             
-                            # TOMBOL EKSEKUSI
+                            # TOMBOL EKSEKUSI (MODIFIKASI: ADA TOMBOL TOLAK)
                             if d['status'] == "Dibatalkan":
                                 st.write("---")
                                 st.markdown("**👇 TINDAKAN ADMIN:**")
-                                st.write("Pastikan uang pesanan ini MASUK sebelum klik tombol ini.")
-                                if st.button("✅ SAHKAN & TANDAI TERPAKAI", key=f"claim_{d['id']}", type="primary"):
-                                    supabase.table("pesanan").update({"status": "Voucher Sudah Dipakai"}).eq("id", d['id']).execute()
-                                    st.success("Voucher berhasil divalidasi!")
-                                    time.sleep(1)
-                                    st.rerun()
+                                st.write("Cek mutasi bank. Apakah uangnya benar-benar masuk?")
+                                
+                                # Bagi menjadi 2 kolom tombol
+                                c_sah, c_tolak = st.columns(2)
+                                
+                                # --- TOMBOL 1: SAHKAN (Terima) ---
+                                with c_sah:
+                                    if st.button("✅ SAHKAN (Valid)", key=f"claim_{d['id']}", type="primary", use_container_width=True):
+                                        # Ubah status jadi Terpakai (Valid)
+                                        supabase.table("pesanan").update({"status": "Voucher Sudah Dipakai"}).eq("id", d['id']).execute()
+                                        st.success("Voucher berhasil divalidasi!")
+                                        time.sleep(1)
+                                        st.rerun()
+                                
+                                # --- TOMBOL 2: TOLAK (Hanguskan) ---
+                                with c_tolak:
+                                    if st.button("🚫 TOLAK (Fraud)", key=f"deny_{d['id']}", use_container_width=True):
+                                        # Ubah status jadi Ditolak (Supaya kode mati & tidak bisa dipakai lagi)
+                                        supabase.table("pesanan").update({"status": "Voucher Ditolak / Hangus"}).eq("id", d['id']).execute()
+                                        st.error("Voucher telah DIHANGUSKAN/DITOLAK.")
+                                        time.sleep(1)
+                                        st.rerun()
 
                         # BUKTI TRANSFER (THE MOMENT OF TRUTH)
                         with col_kanan:
