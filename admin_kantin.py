@@ -332,7 +332,7 @@ elif menu_admin == "📋 Daftar Pesanan":
                     # LOGIKA WARNA STATUS
                     if d['status'] == "Dibatalkan":
                         status_text = "VOUCHER BELUM DIPAKAI"
-                        bg_color = "#e6fffa" # Hijau muda
+                        bg_color = "#07213d" # biru tua
                         border_color = "green"
                     else:
                         status_text = "SUDAH TERPAKAI"
