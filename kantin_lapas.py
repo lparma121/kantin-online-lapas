@@ -485,6 +485,15 @@ elif menu == "🔍 Lacak Pesanan":
                 st.divider()
                 st.warning("⚠️ Pesanan ini belum diproses admin. Anda dapat membatalkannya.")
                 
+                # === TAMBAHAN INFO DANA DI SINI (Sebelum Tombol) ===
+                st.info("""
+                ℹ️ **Info Pengembalian Dana:**
+                Dana dari pesanan yang dibatalkan akan otomatis dialihkan menjadi **Saldo Titipan WBP**. 
+                Saldo ini dapat digunakan WBP untuk belanja langsung di kantin.
+                \nJika ingin uang kembali ke rekening, silakan hubungi Admin via WhatsApp.
+                """)
+                # ===================================================
+
                 # Gunakan key unik agar tidak bentrok
                 if st.button("❌ Batalkan Pesanan Ini", type="primary", key="btn_batal"):
                     try:
@@ -517,10 +526,7 @@ elif menu == "🔍 Lacak Pesanan":
                         
                     except Exception as e:
                         st.error(f"Gagal membatalkan. Error: {e}")
-        else:
-            # Jika dicari tapi tidak ketemu
-            if resi_input: 
-                st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
