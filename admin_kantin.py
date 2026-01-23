@@ -302,18 +302,22 @@ elif menu_admin == "📋 Daftar Pesanan":
             else:
                 st.info("Belum ada riwayat selesai.")
 
-       # TAB 4: RIWAYAT PEMBATALAN & CEK VOUCHER
+      # TAB 4: RIWAYAT PEMBATALAN & CEK VOUCHER (DENGAN BUKTI TF)
         with tab4:
-            st.header("🎫 Cek Validitas Voucher")
+            st.header("🎫 Cek Validitas Voucher & Bukti Transfer")
             
-            # FITUR PENCARIAN KHUSUS VOUCHER
-            cek_kode = st.text_input("🔍 Masukkan Kode Resi Voucher (Contoh: KANTIN-1234-ABCD)")
-            
-            # TAMPILAN DATA (Filter otomatis jika ada pencarian)
+            # FITUR PENCARIAN
+            c_cek, c_info = st.columns([3, 1])
+            with c_cek:
+                cek_kode = st.text_input("🔍 Masukkan Kode Resi / Kode Voucher")
+            with c_info:
+                st.info("Cek bukti transfer asli sebelum klaim voucher.")
+
+            # QUERY DATA
             query = supabase.table("pesanan").select("*").in_("status", ["Dibatalkan", "Voucher Sudah Dipakai"]).order("id", desc=True)
             
             if cek_kode:
-                # Cari spesifik (menghapus awalan REF- jika admin mengetiknya)
+                # Bersihkan input (jika user ketik REF-...)
                 bersih_kode = cek_kode.replace("REF-", "").strip()
                 query = query.eq("no_resi", bersih_kode)
             
@@ -324,33 +328,45 @@ elif menu_admin == "📋 Daftar Pesanan":
                 st.info("Belum ada data voucher/pembatalan.")
             else:
                 for d in items:
-                    # TANDA VISUAL STATUS VOUCHER
-                    icon = "✅" if d['status'] == "Dibatalkan" else "❌"
-                    status_text = "VOUCHER AKTIF (Bisa Dipakai)" if d['status'] == "Dibatalkan" else "SUDAH TERPAKAI"
-                    warna_border = "green" if d['status'] == "Dibatalkan" else "red"
+                    # TENTUKAN WARNA & STATUS
+                    if d['status'] == "Dibatalkan":
+                        status_text = "VOUCHER AKTIF (Bisa Dipakai)"
+                        warna_status = "green"
+                        icon = "✅"
+                    else:
+                        status_text = "SUDAH TERPAKAI (Tidak Berlaku)"
+                        warna_status = "red"
+                        icon = "❌"
                     
                     with st.container(border=True):
-                        st.markdown(f"### {icon} {d['no_resi']}")
-                        st.write(f"**Status Voucher:** :{warna_border}[{status_text}]")
-                        st.write(f"**Pemilik:** {d['nama_pemesan']} ({d['untuk_siapa']})")
+                        # BAGI JADI 2 KOLOM (Kiri: Data, Kanan: Foto)
+                        col_data, col_foto = st.columns([2, 1])
                         
-                        # Tampilkan Nominal Asli dari Database (Anti-Edit Photoshop)
-                        # (Kita estimasi nominal dari item_pesanan atau admin cek manual)
-                        st.code(f"Item Asli: {d['item_pesanan']}")
-                        
-                        st.divider()
-                        
-                        # TOMBOL AKSI (HANYA MUNCUL JIKA BELUM DIPAKAI)
-                        if d['status'] == "Dibatalkan":
-                            c1, c2 = st.columns([3, 1])
-                            with c1:
-                                st.info("Klik tombol di kanan jika user menggunakan voucher ini untuk belanja baru ➔")
-                            with c2:
-                                if st.button("Tandai Terpakai", key=f"claim_{d['id']}", type="primary"):
-                                    # UPDATE STATUS AGAR TIDAK BISA DIPAKAI LAGI
+                        # --- KOLOM 1: DATA VOUCHER ---
+                        with col_data:
+                            st.markdown(f"### {icon} {d['no_resi']}")
+                            st.markdown(f"**Status:** :{warna_status}[**{status_text}**]")
+                            st.write(f"**Pemilik:** {d['nama_pemesan']} ({d['untuk_siapa']})")
+                            st.caption(f"No WA: {d.get('nomor_wa', '-')}")
+                            
+                            st.code(f"Item Asli: {d['item_pesanan']}")
+                            
+                            # TOMBOL AKSI (HANYA MUNCUL JIKA STATUS MASIH AKTIF)
+                            if d['status'] == "Dibatalkan":
+                                st.divider()
+                                st.info("👉 Jika user belanja lagi pakai voucher ini, klik tombol di bawah:")
+                                if st.button("Tandai Voucher Terpakai", key=f"claim_{d['id']}", type="primary"):
                                     supabase.table("pesanan").update({"status": "Voucher Sudah Dipakai"}).eq("id", d['id']).execute()
                                     st.success("Voucher berhasil diklaim!")
                                     time.sleep(1)
                                     st.rerun()
-                        else:
-                            st.warning(f"⚠️ Voucher ini sudah digunakan pada tanggal: {d.get('created_at', '-')[:10]}")
+
+                        # --- KOLOM 2: BUKTI TRANSFER ASLI ---
+                        with col_foto:
+                            st.write("**Bukti Transfer Awal:**")
+                            if d.get('bukti_transfer'):
+                                st.image(d['bukti_transfer'], caption="Foto TF Asli", use_container_width=True)
+                                st.link_button("🔍 Lihat Full", d['bukti_transfer'])
+                            else:
+                                st.error("❌ Tidak ada bukti transfer")
+                                st.caption("Hati-hati, pesanan ini mungkin batal karena tidak bayar.")
