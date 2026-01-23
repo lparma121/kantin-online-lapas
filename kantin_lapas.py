@@ -134,10 +134,26 @@ menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "�
 # =========================================
 # 1. BERANDA
 # =========================================
+# =========================================
+# 1. HALAMAN BERANDA
+# =========================================
 if menu == "🏠 Beranda":
-    st.title("Kantin Online Lapas Arga Makmur")
-    st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
-    st.write("Belanja kebutuhan WBP mudah, aman, dan transparan.")
+    # KITA GUNAKAN 3 KOLOM: 
+    # Kolom kiri & kanan kosong, kolom tengah isi gambar
+    # Angka [1, 2, 1] berarti kolom tengah 2x lebih lebar dari sisi-sisinya
+    c_kiri, c_tengah, c_kanan = st.columns([1, 2, 1])
+    
+    with c_tengah:
+        # Gambar masuk di tengah
+        st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
+    
+    st.title("Selamat Datang di Kantin Online Lapas Arga Makmur")
+    st.markdown("### *Aman, Cepat, dan Transparan.*")
+    
+    c1, c2, c3 = st.columns(3)
+    with c1: st.info("📦 **Stok Terjamin**")
+    with c2: st.success("⚡ **Proses Cepat**")
+    with c3: st.warning("🛡️ **Transparan**")
 
 # =========================================
 # 2. PESAN BARANG (UPLOAD BUKTI & RESI)
@@ -267,4 +283,5 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
