@@ -188,7 +188,7 @@ elif menu == "🛍️ Pesan Barang":
     # Hitung total duit dulu untuk keperluan floating bar
     total_duit = sum(i['harga'] for i in st.session_state.keranjang)
     
-    # --- 1. FITUR BACK TO TOP (PERBAIKAN JS) ---
+    # --- 1. FITUR BACK TO TOP (JURUS PAMUNGKAS) ---
     st.markdown("""
         <style>
             .back-to-top {
@@ -197,29 +197,32 @@ elif menu == "🛍️ Pesan Barang":
                 right: 20px;
                 background-color: #00AAFF;
                 color: white;
-                width: 45px;
-                height: 45px;
+                width: 50px;
+                height: 50px;
                 border-radius: 50%;
                 text-align: center;
-                line-height: 45px;
+                line-height: 50px; /* Vertikal centering text */
                 font-size: 24px;
                 cursor: pointer;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-                z-index: 9999;
-                border: none;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                z-index: 999999; /* Z-index sangat tinggi agar selalu di atas */
+                border: 2px solid white; /* Tambah border putih biar kelihatan */
                 transition: transform 0.2s;
-                opacity: 0.8;
-                text-decoration: none;
             }
-            .back-to-top:hover {
+            .back-to-top:active {
+                transform: scale(0.9);
                 background-color: #0088cc;
-                opacity: 1;
-                transform: scale(1.1);
             }
         </style>
         
         <button class="back-to-top" 
-            onclick="var body = window.parent.document.querySelector('section[data-testid=\'stAppViewContainer\']'); body.scrollTop = 0;"
+            onclick="
+                var targets = window.parent.document.querySelectorAll('section.main, [data-testid=\'stAppViewContainer\'], .stApp');
+                targets.forEach(function(t) {
+                    t.scrollTo({ top: 0, behavior: 'smooth' });
+                    t.scrollTop = 0; // Fallback jika smooth scroll gagal
+                });
+            "
             title="Kembali ke Atas">
             ⬆️
         </button>
@@ -519,6 +522,7 @@ elif menu == "🔍 Lacak Pesanan":
             # Jika dicari tapi tidak ketemu
             if resi_input: 
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
