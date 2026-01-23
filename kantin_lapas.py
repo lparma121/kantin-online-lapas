@@ -34,13 +34,11 @@ st.markdown("""
     }
 
     /* 4. LOGIKA STICKY (PENTING!) */
-    /* Kode ini mencari kolom kedua (checkout) dan menguncinya */
     div[data-testid="column"]:nth-of-type(2) {
         position: sticky;
-        top: 80px; /* Jarak berhenti dari atas layar */
-        align-self: start; /* Pastikan tingginya tidak dipaksa sama dengan kolom kiri */
+        top: 80px;
+        align-self: start;
         
-        /* Hiasan Panel Checkout */
         background-color: #ffffff;
         padding: 20px;
         border-radius: 15px;
@@ -49,7 +47,7 @@ st.markdown("""
         z-index: 100;
     }
 
-    /* 5. Khusus HP: Matikan fitur sticky agar tidak menutupi layar */
+    /* 5. Khusus HP: Matikan fitur sticky */
     @media (max-width: 640px) {
         div[data-testid="column"]:nth-of-type(2) {
             position: static;
@@ -67,7 +65,6 @@ def format_rupiah(angka):
 if 'keranjang' not in st.session_state:
     st.session_state.keranjang = []
 
-# --- PERBAIKAN ERROR DI SINI ---
 def tambah_ke_keranjang(item, harga):
     st.session_state.keranjang.append({"nama": item, "harga": harga})
     st.toast(f"🛒 {item} masuk keranjang!")
@@ -110,11 +107,10 @@ if menu == "🏠 Beranda":
     with c3: st.warning("🛡️ **Transparan**")
 
 # =========================================
-# 2. HALAMAN PESAN BARANG (LAYOUT STICKY)
+# 2. HALAMAN PESAN BARANG (TANPA TUNAI)
 # =========================================
 elif menu == "🛍️ Pesan Barang":
     
-    # Grid Layout: Kiri (Produk) Besar, Kanan (Checkout) Kecil
     col_etalase, col_checkout = st.columns([2.5, 1.2], gap="large")
 
     # --- KOLOM KIRI: PRODUK ---
@@ -126,36 +122,29 @@ elif menu == "🛍️ Pesan Barang":
         if not items:
             st.warning("Maaf, stok habis.")
         else:
-            # Grid 3 Kolom untuk Produk
             grid_cols = st.columns(3)
             for i, item in enumerate(items):
                 with grid_cols[i % 3]:
                     with st.container(border=True):
-                        # Gambar
                         img_url = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
                         st.image(img_url, use_container_width=True)
-                        
-                        # Nama & Harga
                         st.write(f"**{item['nama_barang']}**")
                         harga = item.get('harga', 0)
                         st.markdown(f"<div class='harga-tag'>{format_rupiah(harga)}</div>", unsafe_allow_html=True)
                         st.caption(f"Sisa Stok: {item['stok']}")
                         
-                        # Tombol
                         if st.button("➕ Beli", key=f"btn_{item['id']}"):
                             tambah_ke_keranjang(item['nama_barang'], harga)
                             st.rerun()
 
-    # --- KOLOM KANAN: CHECKOUT (AKAN STICKY KARENA CSS) ---
+    # --- KOLOM KANAN: CHECKOUT ---
     with col_checkout:
         st.header("📝 Data Pengiriman")
         st.write("Isi data penerima di sini:")
         
-        # Tampilan jika keranjang kosong
         if len(st.session_state.keranjang) == 0:
             st.info("⚠️ Silakan pilih menu di sebelah kiri.")
         else:
-            # Container putih checkout
             with st.container(border=True):
                 st.markdown(f"**Total Bayar:**")
                 total_duit = sum(item['harga'] for item in st.session_state.keranjang)
@@ -165,9 +154,23 @@ elif menu == "🛍️ Pesan Barang":
                 with st.form("checkout_form"):
                     pemesan = st.text_input("Nama Keluarga")
                     untuk = st.text_input("Nama WBP (Penerima)")
-                    wa = st.text_input("WhatsApp", placeholder="Contoh: 0812xxx")
-                    bayar = st.selectbox("Pembayaran", ["Transfer Bank", "Tunai di Loket"])
+                    wa = st.text_input("WhatsApp", placeholder="08xxxx")
                     
+                    # --- UPDATE: TUNAI DIHILANGKAN ---
+                    bayar = st.selectbox("Metode Pembayaran", [
+                        "Transfer Bank (BRI/BCA)", 
+                        "E-Wallet (DANA/Gopay)"
+                    ])
+                    
+                    # Info Rekening
+                    with st.expander("ℹ️ Info Rekening Tujuan", expanded=True):
+                        st.caption("Silakan transfer sesuai total ke:")
+                        st.markdown("""
+                        - **BRI**: 1234-5678-9000 (An. Koperasi Lapas)
+                        - **DANA**: 0812-3456-7890
+                        *(Simpan bukti transfer untuk dikirim via WA)*
+                        """)
+
                     st.markdown("---")
                     submit = st.form_submit_button("✅ KIRIM PESANAN", type="primary")
                     
@@ -185,11 +188,9 @@ elif menu == "🛍️ Pesan Barang":
                                 "nomor_wa": wa
                             }
                             
-                            # Simpan ke Database
                             res_in = supabase.table("pesanan").insert(d_pesan).execute()
                             id_p = res_in.data[0]['id']
 
-                            # Update Stok Otomatis
                             for nama_brg in list_barang:
                                 curr = supabase.table("barang").select("stok").eq("nama_barang", nama_brg).execute()
                                 if curr.data:
