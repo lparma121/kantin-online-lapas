@@ -11,7 +11,7 @@ URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-st.set_page_config(page_title="Kantin Lapas Online", page_icon="🍱", layout="wide")
+st.set_page_config(page_title="e-PAS Mart (Elektronik Pemasyarakatan Mart)", page_icon="🍱", layout="wide")
 
 # --- CSS CUSTOM ---
 st.markdown("""
@@ -147,7 +147,7 @@ if menu == "🏠 Beranda":
         # Gambar masuk di tengah
         st.image("https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2070&auto=format&fit=crop", use_container_width=True)
     
-    st.title("Selamat Datang di Kantin Online Lapas Arga Makmur")
+    st.title("Selamat Datang di e-PAS Mart (Elektronik Pemasyarakatan Mart) Lapas Arga Makmur")
     st.markdown("### *Aman, Cepat, dan Transparan.*")
     
     c1, c2, c3 = st.columns(3)
@@ -283,5 +283,6 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
