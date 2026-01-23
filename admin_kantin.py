@@ -277,7 +277,57 @@ elif menu_admin == "📋 Daftar Pesanan":
         with tab1:
             st.header("📥 Pesanan Baru Masuk")
             res = supabase.table("pesanan").select("*").eq("status", "Menunggu Verifikasi").order("id", desc=True).execute()
-            render_pesanan(res.data, "Masuk")
+            
+            if not res.data:
+                st.info("Tidak ada pesanan baru.")
+            else:
+                for p in res.data:
+                    with st.container(border=True):
+                        cols = st.columns([1, 2, 2])
+                        
+                        # KOLOM 1: BUKTI & INFO
+                        with cols[0]:
+                            st.subheader(f"#{p['id']}")
+                            st.caption(f"Resi: {p.get('no_resi', '-')}")
+                            
+                            # TAMPILKAN BUKTI TRANSFER (WAJIB CEK DISINI)
+                            if p.get('bukti_transfer'):
+                                st.image(p['bukti_transfer'], caption="Cek Bukti Ini!", width=150)
+                                st.link_button("🔍 Zoom Bukti", p['bukti_transfer'])
+                            else:
+                                st.error("❌ TIDAK ADA BUKTI TF")
+                        
+                        # KOLOM 2: DETAIL ITEM
+                        with cols[1]:
+                            st.write(f"**Pengirim:** {p['nama_pemesan']}")
+                            st.write(f"**Penerima:** {p['untuk_siapa']}")
+                            st.info(f"Metode: {p.get('cara_bayar', '-')}")
+                            st.code(f"Isi: {p['item_pesanan']}")
+
+                        # KOLOM 3: KEPUTUSAN ADMIN
+                        with cols[2]:
+                            st.write("---")
+                            st.write("**Tindakan Admin:**")
+                            st.write("Lihat foto di kiri. Uang masuk?")
+                            
+                            c_proses, c_tolak = st.columns(2)
+                            
+                            # TOMBOL PROSES (JIKA UANG MASUK)
+                            with c_proses:
+                                if st.button("✅ TERIMA", key=f"acc_{p['id']}", type="primary", use_container_width=True):
+                                    supabase.table("pesanan").update({"status": "Pembayaran Valid (Diproses)"}).eq("id", p['id']).execute()
+                                    st.success("Pesanan diproses!")
+                                    time.sleep(1)
+                                    st.rerun()
+                            
+                            # TOMBOL TOLAK (JIKA BUKTI PALSU/SAMPAH)
+                            with c_tolak:
+                                if st.button("🗑️ TOLAK", key=f"rej_{p['id']}", use_container_width=True):
+                                    # Hapus langsung dari database karena ini sampah
+                                    supabase.table("pesanan").delete().eq("id", p['id']).execute()
+                                    st.error("Pesanan palsu dihapus!")
+                                    time.sleep(1)
+                                    st.rerun()
 
         # TAB 2: SEDANG DIPROSES
         with tab2:
