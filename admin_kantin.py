@@ -134,20 +134,53 @@ with tab2:
             img_file = st.file_uploader("Upload Foto", type=['png', 'jpg', 'jpeg'])
             img_url_text = st.text_input("Atau Link URL")
         
+       # --- TAB 2: TAMBAH BARANG ---
+with tab2:
+    with st.form("add_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            # Perhatikan nama variabel ini: nama_baru
+            nama_baru = st.text_input("Nama Produk") 
+            harga_baru = st.number_input("Harga (Rp)", min_value=0, step=500, value=5000)
+        with c2:
+            stok_awal = st.number_input("Stok Awal", min_value=1, value=10)
+            img_file = st.file_uploader("Upload Foto", type=['png', 'jpg', 'jpeg'])
+            img_url_text = st.text_input("Atau Link URL")
+        
+        # Tombol Submit
         if st.form_submit_button("➕ Tambahkan"):
-            if nama_baru:
-                final_url = ""
-                if img_file:
-                    f_name = f"new_{int(time.time())}"
-                    final_url = upload_ke_supabase(img_file, "produk", f_name)
-                elif img_url_text:
-                    final_url = img_url_text
-                
-                new_data = {"nama_barang": nama_baru, "stok": stok_awal, "harga": harga_baru, "gambar_url": final_url}
-                supabase.table("barang").insert(new_data).execute()
-                st.success(f"🎉 {nama_baru} berhasil ditambahkan!")
-                time.sleep(1)
-                st.rerun()
+            if nama_baru: # Cek variabel nama_baru
+                try:
+                    final_url = ""
+                    # 1. Proses Upload Gambar
+                    if img_file:
+                        f_name = f"new_{int(time.time())}"
+                        final_url = upload_ke_supabase(img_file, "produk", f_name)
+                    elif img_url_text:
+                        final_url = img_url_text
+                    
+                    # 2. Susun Data (PERBAIKAN DI SINI)
+                    # Pastikan key 'nama_barang' diisi dengan variabel 'nama_baru'
+                    new_data = {
+                        "nama_barang": nama_baru, 
+                        "stok": stok_awal, 
+                        "harga": harga_baru, 
+                        "gambar_url": final_url
+                        # 'kategori': '-'  <-- Tambahkan ini jika kolom kategori di database wajib diisi (Not Null)
+                    }
+                    
+                    # 3. Eksekusi ke Database
+                    supabase.table("barang").insert(new_data).execute()
+                    
+                    st.success(f"🎉 {nama_baru} berhasil ditambahkan!")
+                    time.sleep(1)
+                    st.rerun()
+                    
+                except Exception as e:
+                    # Ini akan menampilkan pesan error asli dari Supabase agar ketahuan salahnya
+                    st.error(f"Gagal menyimpan ke database. Error: {e}")
+            else:
+                st.warning("Nama produk wajib diisi!")
 
 st.markdown("---")
 
