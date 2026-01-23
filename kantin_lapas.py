@@ -420,21 +420,32 @@ elif menu == "🛍️ Pesan Barang":
                 st.divider()
                 st.markdown(f"### Total Bayar: {format_rupiah(total_duit)}")
                 st.divider()
-
-                st.write("**Metode Pembayaran:**")
-                bayar = st.selectbox("Pilih Bank/E-Wallet", ["Transfer Bank (BRI/BCA)", "E-Wallet (DANA/Gopay)"], label_visibility="collapsed")
+# ... (kode sebelumnya: rincian barang & total bayar) ...
                 
+                st.write("**Metode Pembayaran:**")
+                # TAMBAHKAN OPSI "Voucher / Saldo Refund" DI SINI
+                bayar = st.selectbox("Pilih Metode", 
+                                     ["Transfer Bank (BRI/BCA)", "E-Wallet (DANA/Gopay)", "🎫 Voucher / Saldo Refund"], 
+                                     label_visibility="collapsed")
+                
+                # TAMPILKAN INFO SESUAI PILIHAN
                 if "Transfer Bank" in bayar:
                     st.warning("""
                     🏦 **Bank BRI**
                     No. Rek: **1234-5678-900**
                     An. Koperasi Lapas
                     """)
-                else:
+                elif "E-Wallet" in bayar:
                     st.warning("""
                     📱 **DANA / Gopay**
                     Nomor: **0812-3456-7890**
                     An. Admin Kantin
+                    """)
+                elif "Voucher" in bayar:
+                    st.info("""
+                    🎫 **Bayar Pakai Voucher**
+                    Punya sisa saldo atau voucher refund? 
+                    Silakan **Upload Gambar Voucher** tersebut di kolom bukti pembayaran di bawah ini sebagai pengganti transfer.
                     """)
 
                 st.write("**Data Pemesan:**")
@@ -443,8 +454,10 @@ elif menu == "🛍️ Pesan Barang":
                     untuk = st.text_input("Nama WBP (Penerima)")
                     wa = st.text_input("Nomor WhatsApp Aktif")
                     
-                    st.write("**Upload Bukti Transfer:**")
-                    bukti_tf = st.file_uploader("Upload Foto", type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
+                    # UBAH LABEL SEDIKIT AGAR LEBIH JELAS
+                    label_upload = "Upload Bukti Transfer / Gambar Voucher"
+                    st.write(f"**{label_upload}:**")
+                    bukti_tf = st.file_uploader(label_upload, type=['jpg', 'png', 'jpeg'], label_visibility="collapsed")
                     
                     st.markdown("---")
                     submit = st.form_submit_button("✅ KIRIM PESANAN SEKARANG", type="primary")
@@ -603,6 +616,7 @@ elif menu == "🔍 Lacak Pesanan":
                         
                     except Exception as e:
                         st.error(f"Gagal membatalkan. Error: {e}")
+
 
 
 
