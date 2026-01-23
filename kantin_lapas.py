@@ -92,14 +92,12 @@ def upload_file(file_bytes, folder, nama_file):
     except Exception as e: return None
 
 # --- SESSION STATE KERANJANG ---
-if 'keranjang' not in st.session_state: st.session_state.keranjang = []
-
-def tambah_ke_keranjang(item, harga):
-    st.session_state.keranjang.append({"nama": item, "harga": harga})
-    st.toast(f"🛒 {item} masuk keranjang!")
+def tambah_ke_keranjang(item, harga, jumlah):
+    for _ in range(jumlah):
+        st.session_state.keranjang.append({"nama": item, "harga": harga})
+    st.toast(f"🛒 {jumlah}x {item} masuk keranjang!")
 
 def reset_keranjang(): st.session_state.keranjang = []
-
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🛒 Keranjang")
@@ -314,5 +312,6 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
