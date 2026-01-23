@@ -217,19 +217,16 @@ elif menu == "🛍️ Pesan Barang":
     # --- MEMBUAT TABS ---
     tab_menu, tab_checkout = st.tabs(["🍔 Pilih Menu", "💳 Pembayaran"])
 
-   # === TAB 1: ETALASE MENU (Desain Mobile App) ===
+   # === TAB 1: ETALASE MENU (DENGAN FRAGMENT ANTI-REFRESH) ===
     with tab_menu:
-        # --- CSS KHUSUS AGAR GAMBAR RAPI DI HP ---
+        # --- CSS Style (Tetap sama) ---
         st.markdown("""
         <style>
-            /* Memaksa gambar menjadi rasio kotak (Square) & Ujung tumpul */
             div[data-testid="stImage"] img {
-                height: 150px !important; /* Tinggi gambar fix */
-                object-fit: cover !important; /* Potong gambar biar pas */
+                height: 150px !important; 
+                object-fit: cover !important; 
                 border-radius: 10px 10px 0 0 !important;
             }
-            
-            /* Desain Kartu Produk */
             div[data-testid="stVerticalBlockBorderWrapper"] {
                 background-color: white;
                 border-radius: 10px;
@@ -237,13 +234,11 @@ elif menu == "🛍️ Pesan Barang":
                 padding: 10px !important;
                 margin-bottom: 10px;
             }
-            
-            /* Mengecilkan font nama barang di HP */
             .nama-produk {
                 font-size: 14px;
                 font-weight: bold;
                 line-height: 1.2;
-                height: 35px; /* Batasi tinggi teks 2 baris */
+                height: 35px;
                 overflow: hidden;
                 display: -webkit-box;
                 -webkit-line-clamp: 2;
@@ -255,58 +250,58 @@ elif menu == "🛍️ Pesan Barang":
 
         st.header("🛍️ Etalase")
         
+        # --- FUNGSI KHUSUS SATU KARTU PRODUK (FRAGMENT) ---
+        # @st.fragment membuat fungsi ini berjalan sendiri tanpa reload halaman utama
+        @st.fragment
+        def kartu_produk_live(item):
+            with st.container(border=True):
+                # 1. GAMBAR
+                img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
+                st.image(img, use_container_width=True)
+                
+                # 2. NAMA & HARGA
+                st.markdown(f"""
+                <div class="nama-produk">{item['nama_barang']}</div>
+                <div style="color:#d9534f; font-weight:bold; font-size:13px;">{format_rupiah(item['harga'])}</div>
+                <div style="font-size:11px; color:grey;">Stok: {item['stok']}</div>
+                """, unsafe_allow_html=True)
+                
+                # 3. TOMBOL (+ -)
+                # Hitung keranjang langsung dari session state
+                qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
+                
+                c_min, c_val, c_plus = st.columns([1, 1, 1])
+                
+                with c_min:
+                    if st.button("−", key=f"min_{item['id']}"): 
+                        if qty_di_keranjang > 0:
+                            kurangi_dari_keranjang(item['nama_barang'])
+                            st.rerun() # Rerun ini HANYA me-refresh kotak kartu ini saja!
+                
+                with c_val:
+                    st.markdown(f"<div style='text-align:center; font-weight:bold; padding-top:5px;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
+                
+                with c_plus:
+                    if st.button("➕", key=f"plus_{item['id']}"):
+                        if qty_di_keranjang < item['stok']:
+                            tambah_ke_keranjang(item['nama_barang'], item['harga'])
+                            st.rerun() # Rerun ini HANYA me-refresh kotak kartu ini saja!
+                        else:
+                            st.toast("Stok Habis!", icon="⚠️")
+
+        # --- END FUNGSI FRAGMENT ---
+
         # Ambil data barang
         res_b = supabase.table("barang").select("*").gt("stok", 0).order('nama_barang').execute()
         items = res_b.data
         
         if items:
-            # KITA KUNCI JADI 2 KOLOM (Standar Aplikasi HP)
-            # Jangan pakai 3 atau 4, itu terlalu kecil untuk jari tangan di HP
             cols = st.columns(2) 
-            
             for i, item in enumerate(items):
                 with cols[i % 2]:
-                    # Container Border = True (Efek Kartu)
-                    with st.container(border=True):
-                        
-                        # 1. GAMBAR
-                        img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
-                        st.image(img, use_container_width=True)
-                        
-                        # 2. NAMA & HARGA (Pakai HTML biar font pas di HP)
-                        st.markdown(f"""
-                        <div class="nama-produk">{item['nama_barang']}</div>
-                        <div style="color:#d9534f; font-weight:bold; font-size:13px;">{format_rupiah(item['harga'])}</div>
-                        <div style="font-size:11px; color:grey;">Stok: {item['stok']}</div>
-                        """, unsafe_allow_html=True)
-                        
-                        # 3. TOMBOL (+ -)
-                        # Hitung keranjang
-                        qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
-                        
-                        c_min, c_val, c_plus = st.columns([1, 1, 1])
-                        
-                        with c_min:
-                            # Tombol Minus Tipis
-                            if st.button("−", key=f"min_{item['id']}"): 
-                                if qty_di_keranjang > 0:
-                                    kurangi_dari_keranjang(item['nama_barang'])
-                                    st.rerun()
-                        
-                        with c_val:
-                            # Angka ditengah
-                            st.markdown(f"<div style='text-align:center; font-weight:bold; padding-top:5px;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
-                        
-                        with c_plus:
-                            # Tombol Plus Tebal
-                            if st.button("➕", key=f"plus_{item['id']}"):
-                                if qty_di_keranjang < item['stok']:
-                                    tambah_ke_keranjang(item['nama_barang'], item['harga'])
-                                    st.rerun()
-                                else:
-                                    st.toast("Stok Habis!", icon="⚠️")
+                    # PANGGIL FUNGSI FRAGMENT DI SINI
+                    kartu_produk_live(item)
             
-            # Spasi bawah agar tidak tertutup floating bar
             st.write("\n" * 6)
     # === TAB 2: CHECKOUT / PEMBAYARAN ===
     with tab_checkout:
@@ -488,6 +483,7 @@ elif menu == "🔍 Lacak Pesanan":
             # Jika dicari tapi tidak ketemu
             if resi_input: 
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
