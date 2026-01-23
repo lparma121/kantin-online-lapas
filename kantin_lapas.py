@@ -182,17 +182,13 @@ if menu == "🏠 Beranda":
     st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
-# 2. PESAN BARANG (MODEL TABS UNTUK HP)
-# =========================================
-# =========================================
 # 2. PESAN BARANG (FULL FEATURE: BACK TO TOP + FRAGMENT)
 # =========================================
 elif menu == "🛍️ Pesan Barang":
     # Hitung total duit dulu untuk keperluan floating bar
     total_duit = sum(i['harga'] for i in st.session_state.keranjang)
     
-    # --- 1. FITUR BACK TO TOP (TOMBOL PANAH ATAS) ---
-    # Posisi bottom: 90px agar tidak menutupi Floating Bar Total Harga
+    # --- 1. FITUR BACK TO TOP (PERBAIKAN JS) ---
     st.markdown("""
         <style>
             .back-to-top {
@@ -213,6 +209,7 @@ elif menu == "🛍️ Pesan Barang":
                 border: none;
                 transition: transform 0.2s;
                 opacity: 0.8;
+                text-decoration: none;
             }
             .back-to-top:hover {
                 background-color: #0088cc;
@@ -221,11 +218,12 @@ elif menu == "🛍️ Pesan Barang":
             }
         </style>
         
-        <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'});" title="Kembali ke Atas">
+        <button class="back-to-top" 
+            onclick="var body = window.parent.document.querySelector('section[data-testid=\'stAppViewContainer\']'); body.scrollTop = 0;"
+            title="Kembali ke Atas">
             ⬆️
         </button>
     """, unsafe_allow_html=True)
-
     # --- 2. CSS UNTUK FLOATING BAR (TOTAL HARGA MELAYANG DI BAWAH) ---
     if total_duit > 0:
         st.markdown(f"""
@@ -521,6 +519,7 @@ elif menu == "🔍 Lacak Pesanan":
             # Jika dicari tapi tidak ketemu
             if resi_input: 
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
