@@ -194,7 +194,7 @@ if menu == "🏠 Beranda":
     st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
-# 2. PESAN BARANG (UPLOAD BUKTI & RESI)
+# 2. PESAN BARANG (DENGAN LIST BARANG DI CHECKOUT)
 # =========================================
 elif menu == "🛍️ Pesan Barang":
     col_etalase, col_checkout = st.columns([2.5, 1.2], gap="large")
@@ -220,9 +220,16 @@ elif menu == "🛍️ Pesan Barang":
         st.header("📝 Checkout")
         
         if not st.session_state.keranjang:
-            st.info("Keranjang kosong.")
+            st.info("Keranjang kosong. Silakan pilih menu di sebelah kiri.")
         else:
             with st.container(border=True):
+                # --- FITUR BARU: MENAMPILKAN RINCIAN ITEM ---
+                st.write("**Rincian Pesanan:**")
+                for item in st.session_state.keranjang:
+                    st.caption(f"- {item['nama']} ({format_rupiah(item['harga'])})")
+                
+                st.divider()
+                
                 total_duit = sum(i['harga'] for i in st.session_state.keranjang)
                 st.markdown(f"### Total: {format_rupiah(total_duit)}")
                 st.divider()
@@ -236,21 +243,16 @@ elif menu == "🛍️ Pesan Barang":
                     
                     st.info("ℹ️ Silakan Transfer ke: **BRI 1234-5678-900 (Koperasi)**")
                     
-                    # INPUT BUKTI TRANSFER
                     bukti_tf = st.file_uploader("📤 Upload Bukti Transfer (Wajib)", type=['jpg', 'png', 'jpeg'])
 
                     submit = st.form_submit_button("✅ KIRIM PESANAN", type="primary")
                     
                     if submit:
                         if pemesan and untuk and wa and bukti_tf:
-                            # 1. Generate Nomor Resi
                             no_resi = generate_resi()
-                            
-                            # 2. Upload Bukti Transfer
                             file_bukti = bukti_tf.getvalue()
                             url_bukti = upload_file(file_bukti, "bukti_transfer", f"tf_{no_resi}.jpg")
                             
-                            # 3. Buat Gambar Nota (Struk)
                             file_nota = buat_struk_image(
                                 {"nama_pemesan": pemesan, "untuk_siapa": untuk}, 
                                 st.session_state.keranjang, 
@@ -259,7 +261,6 @@ elif menu == "🛍️ Pesan Barang":
                             )
                             url_nota = upload_file(file_nota, "nota", f"nota_{no_resi}.jpg")
                             
-                            # 4. Simpan ke Database
                             list_items = ", ".join([b['nama'] for b in st.session_state.keranjang])
                             data_db = {
                                 "nama_pemesan": pemesan, "untuk_siapa": untuk,
@@ -271,25 +272,18 @@ elif menu == "🛍️ Pesan Barang":
                             }
                             supabase.table("pesanan").insert(data_db).execute()
                             
-                            # 5. Kurangi Stok
                             for b in st.session_state.keranjang:
                                 cur = supabase.table("barang").select("stok").eq("nama_barang", b['nama']).execute()
                                 if cur.data:
                                     supabase.table("barang").update({"stok": cur.data[0]['stok']-1}).eq("nama_barang", b['nama']).execute()
 
                             reset_keranjang()
-                            
-                            # TAMPILAN SUKSES & DOWNLOAD RESI
                             st.success("🎉 Pesanan Berhasil!")
                             st.write(f"Nomor Resi: **{no_resi}**")
-                            
-                            # Tampilkan Nota untuk didownload
                             st.image(file_nota, caption="Nota Resmi", width=300)
                             st.download_button("📥 Download Nota (JPG)", data=file_nota, file_name=f"{no_resi}.jpg", mime="image/jpeg")
-                            
                         else:
                             st.error("Mohon lengkapi semua data & upload bukti transfer!")
-
 # =========================================
 # 3. LACAK PESANAN (PAKAI NO RESI)
 # =========================================
@@ -321,6 +315,7 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
