@@ -435,14 +435,14 @@ elif menu == "🔍 Lacak Pesanan":
                     st.divider()
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
                 
-                # --- FITUR BATALKAN PESANAN ---
+                # --- FITUR BATALKAN PESANAN (VERSI UPDATE STATUS) ---
                 if d['status'] == "Menunggu Verifikasi":
                     st.divider()
                     st.warning("⚠️ Pesanan ini belum diproses admin. Anda dapat membatalkannya.")
                     
                     if st.button("❌ Batalkan Pesanan Ini", type="primary"):
                         try:
-                            # 1. Parsing item string (cth: "2x Nasi, 1x Es") untuk kembalikan stok
+                            # 1. Kembalikan Stok (Sama seperti kode sebelumnya)
                             items_list = d['item_pesanan'].split(", ")
                             for item_str in items_list:
                                 parts = item_str.split("x ", 1)
@@ -450,22 +450,20 @@ elif menu == "🔍 Lacak Pesanan":
                                     qty_batal = int(parts[0])
                                     nama_batal = parts[1]
                                     
-                                    # Kembalikan Stok
                                     curr = supabase.table("barang").select("stok").eq("nama_barang", nama_batal).execute()
                                     if curr.data:
                                         stok_skrg = curr.data[0]['stok']
                                         supabase.table("barang").update({"stok": stok_skrg + qty_batal}).eq("nama_barang", nama_batal).execute()
                             
-                            # 2. Hapus Pesanan
-                            supabase.table("pesanan").delete().eq("id", d['id']).execute()
+                            # 2. BUKAN DELETE, TAPI UPDATE STATUS JADI 'Dibatalkan'
+                            # Ini lebih mudah berhasil daripada delete jika ada masalah izin
+                            supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
                             
-                            st.success("✅ Pesanan berhasil dibatalkan. Stok barang telah dikembalikan.")
+                            st.success("✅ Pesanan telah dibatalkan. Stok barang dikembalikan.")
                             time.sleep(2)
                             st.rerun()
                         except Exception as e:
                             st.error(f"Gagal membatalkan: {e}")
-                            
-            else:
-                st.error("Nomor Resi tidak ditemukan.")
+
 
 
