@@ -244,19 +244,14 @@ elif menu == "🛍️ Pesan Barang":
                     No. Rek: **1234-5678-900**
                     An. Koperasi Lapas
                     """)
-                    st.info("""
-                    🏦 **Transfer Bank BCA**
-                    No. Rek: **1234-5678-900**
-                    An. Koperasi Lapas
-                    """)
                 else:
                     st.info("""
-                    📱 **E-Wallet (DANA/Gopay/OVO)**
+                    📱 **E-Wallet (DANA/Gopay)**
                     Nomor: **0812-3456-7890**
                     An. Admin Kantin
                     """)
 
-                # 4. FORM PENGISIAN DATA (Di bawah info rekening)
+                # 4. FORM PENGISIAN DATA (HANYA INPUT & SUBMIT)
                 with st.form("form_pesan"):
                     pemesan = st.text_input("Nama Pengirim")
                     untuk = st.text_input("Nama WBP (Penerima)")
@@ -269,43 +264,46 @@ elif menu == "🛍️ Pesan Barang":
                     st.markdown("---")
                     submit = st.form_submit_button("✅ KIRIM PESANAN", type="primary")
                     
-                    if submit:
-                        if pemesan and untuk and wa and bukti_tf:
-                            no_resi = generate_resi()
-                            file_bukti = bukti_tf.getvalue()
-                            url_bukti = upload_file(file_bukti, "bukti_transfer", f"tf_{no_resi}.jpg")
-                            
-                            file_nota = buat_struk_image(
-                                {"nama_pemesan": pemesan, "untuk_siapa": untuk}, 
-                                st.session_state.keranjang, 
-                                total_duit, 
-                                no_resi
-                            )
-                            url_nota = upload_file(file_nota, "nota", f"nota_{no_resi}.jpg")
-                            
-                            list_items = ", ".join([b['nama'] for b in st.session_state.keranjang])
-                            data_db = {
-                                "nama_pemesan": pemesan, "untuk_siapa": untuk,
-                                "item_pesanan": list_items, "cara_bayar": bayar,
-                                "status": "Menunggu Verifikasi", "nomor_wa": wa,
-                                "no_resi": no_resi,
-                                "bukti_transfer": url_bukti,
-                                "nota_url": url_nota
-                            }
-                            supabase.table("pesanan").insert(data_db).execute()
-                            
-                            for b in st.session_state.keranjang:
-                                cur = supabase.table("barang").select("stok").eq("nama_barang", b['nama']).execute()
-                                if cur.data:
-                                    supabase.table("barang").update({"stok": cur.data[0]['stok']-1}).eq("nama_barang", b['nama']).execute()
+                # 5. LOGIKA PROSES (DITARUH DI LUAR FORM - PENTING!)
+                if submit:
+                    if pemesan and untuk and wa and bukti_tf:
+                        no_resi = generate_resi()
+                        file_bukti = bukti_tf.getvalue()
+                        url_bukti = upload_file(file_bukti, "bukti_transfer", f"tf_{no_resi}.jpg")
+                        
+                        file_nota = buat_struk_image(
+                            {"nama_pemesan": pemesan, "untuk_siapa": untuk}, 
+                            st.session_state.keranjang, 
+                            total_duit, 
+                            no_resi
+                        )
+                        url_nota = upload_file(file_nota, "nota", f"nota_{no_resi}.jpg")
+                        
+                        list_items = ", ".join([b['nama'] for b in st.session_state.keranjang])
+                        data_db = {
+                            "nama_pemesan": pemesan, "untuk_siapa": untuk,
+                            "item_pesanan": list_items, "cara_bayar": bayar,
+                            "status": "Menunggu Verifikasi", "nomor_wa": wa,
+                            "no_resi": no_resi,
+                            "bukti_transfer": url_bukti,
+                            "nota_url": url_nota
+                        }
+                        supabase.table("pesanan").insert(data_db).execute()
+                        
+                        for b in st.session_state.keranjang:
+                            cur = supabase.table("barang").select("stok").eq("nama_barang", b['nama']).execute()
+                            if cur.data:
+                                supabase.table("barang").update({"stok": cur.data[0]['stok']-1}).eq("nama_barang", b['nama']).execute()
 
-                            reset_keranjang()
-                            st.success("🎉 Pesanan Berhasil!")
-                            st.write(f"Nomor Resi: **{no_resi}**")
-                            st.image(file_nota, caption="Nota Resmi", width=300)
-                            st.download_button("📥 Download Nota (JPG)", data=file_nota, file_name=f"{no_resi}.jpg", mime="image/jpeg")
-                        else:
-                            st.error("Mohon lengkapi semua data & upload bukti transfer!")
+                        reset_keranjang()
+                        st.success("🎉 Pesanan Berhasil!")
+                        st.write(f"Nomor Resi: **{no_resi}**")
+                        st.image(file_nota, caption="Nota Resmi", width=300)
+                        
+                        # TOMBOL DOWNLOAD AMAN KARENA SUDAH DI LUAR FORM
+                        st.download_button("📥 Download Nota (JPG)", data=file_nota, file_name=f"{no_resi}.jpg", mime="image/jpeg")
+                    else:
+                        st.error("Mohon lengkapi semua data & upload bukti transfer!")
 # =========================================
 # 3. LACAK PESANAN (PAKAI NO RESI)
 # =========================================
@@ -337,6 +335,7 @@ elif menu == "🔍 Lacak Pesanan":
                     st.image(d['foto_penerima'], caption="Bukti Foto Penyerahan")
             else:
                 st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
