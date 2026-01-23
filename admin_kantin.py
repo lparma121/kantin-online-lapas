@@ -67,7 +67,7 @@ def format_rupiah(angka):
 # 1. MANAJEMEN PRODUK
 # =========================================
 st.header("📦 Manajemen Produk")
-tab1, tab2 = st.tabs(["📝 Edit Barang & Stok", "➕ Tambah Menu Baru"])
+tab1, tab2, tab3, tab4 = st.tabs(["📥 Pesanan Masuk", "📦 Sedang Diproses", "✅ Riwayat Selesai", "❌ Dibatalkan"])
 
 # --- TAB 1: EDIT BARANG ---
 with tab1:
@@ -264,3 +264,56 @@ if data_pesanan:
                             st.rerun()
 else:
     st.info("✅ Tidak ada antrian pesanan.")
+
+# =========================================
+# TAB 4: RIWAYAT PEMBATALAN (Untuk Cek Refund)
+# =========================================
+with tab4:
+    st.header("❌ Pesanan Dibatalkan WBP/Keluarga")
+    st.info("Halaman ini untuk mengecek pesanan yang dibatalkan guna keperluan **Pengembalian Dana (Refund)** atau **Pencatatan Saldo**.")
+    
+    # Ambil data yang statusnya 'Dibatalkan'
+    res_batal = supabase.table("pesanan").select("*").eq("status", "Dibatalkan").order("created_at", desc=True).execute()
+    items = res_batal.data
+
+    if not items:
+        st.write("Belum ada data pembatalan.")
+    else:
+        for d in items:
+            # Gunakan Expander agar rapi
+            with st.expander(f"🚫 {d['nama_pemesan']} ➝ {d['untuk_siapa']} | Resi: {d['no_resi']}"):
+                c1, c2 = st.columns(2)
+                
+                with c1:
+                    st.write("Realisasi Item:")
+                    st.code(d['item_pesanan'])
+                    st.caption(f"No WA: {d['nomor_wa']}")
+                    st.caption(f"Metode: {d['cara_bayar']}")
+                
+                with c2:
+                    st.write("**Bukti Transfer Awal:**")
+                    if d['bukti_transfer']:
+                        st.image(d['bukti_transfer'], width=200)
+                    else:
+                        st.warning("Tidak ada bukti transfer")
+
+                st.divider()
+                
+                # --- OPSI TINDAKAN ADMIN ---
+                st.write("**Tindakan Admin:**")
+                col_act1, col_act2 = st.columns(2)
+                
+                with col_act1:
+                    # Tombol Hapus Permanen (Jika masalah uang sudah kelar)
+                    if st.button("🗑️ Hapus Data", key=f"del_{d['id']}"):
+                        supabase.table("pesanan").delete().eq("id", d['id']).execute()
+                        st.success("Data berhasil dihapus dari arsip.")
+                        st.rerun()
+                
+                with col_act2:
+                    # Tombol Tandai Sudah Direfund (Opsional: Ubah status jadi 'Refunded')
+                    if st.button("💰 Tandai Sudah Refund/Saldo", key=f"ref_{d['id']}"):
+                        # Kita ubah statusnya jadi 'Selesai (Refund)' agar tidak menumpuk di sini
+                        # Atau biarkan saja di sini tapi beri tanda (tergantung selera)
+                        # Di sini saya contohkan hapus saja, atau Anda bisa buat status baru 'Refunded'
+                        st.toast("Admin harus mencatat manual di buku kas.")
