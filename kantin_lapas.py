@@ -6,6 +6,7 @@ import io
 import random
 import string
 import base64
+from datetime import datetime, timedelta, timezone
 
 # --- KONEKSI DATABASE ---
 try:
@@ -29,7 +30,7 @@ st.markdown("""
 
     .block-container {
         padding-top: 1rem !important;
-        padding-bottom: 8rem !important; /* Ruang lebih besar di bawah */
+        padding-bottom: 8rem !important;
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
     }
@@ -75,57 +76,34 @@ st.markdown("""
     .stok-produk { font-size: 10px; color: #888; margin-bottom: 8px; }
 
     /* 4. FLOATING BOTTOM BAR (KERANJANG MELAYANG) */
-    /* Ini trik CSS untuk membuat st.container melayang di bawah */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) {
-        position: fixed; 
-        bottom: 15px; 
-        left: 2.5%; 
-        width: 95%; 
-        z-index: 999999;
-        background: white; 
-        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        border-radius: 15px; 
-        border: 1px solid #00AAFF;
-        padding: 10px 15px !important; 
-        margin: 0 !important;
-        display: flex;
-        align-items: center;
+        position: fixed; bottom: 15px; left: 2.5%; width: 95%; z-index: 999999;
+        background: white; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        border-radius: 15px; border: 1px solid #00AAFF;
+        padding: 10px 15px !important; margin: 0 !important;
+        display: flex; align-items: center;
     }
-    
-    /* Tombol di dalam Floating Bar */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) button {
-        border-radius: 50px !important; 
-        height: 40px !important;
-        background-color: #00AAFF !important;
-        border: none !important;
+        border-radius: 50px !important; height: 40px !important;
+        background-color: #00AAFF !important; border: none !important;
     }
 
     /* 5. BACK TO TOP (GHOST MODE) */
     .back-to-top {
-        position: fixed; 
-        bottom: 30px; /* Posisi Default (Kalau keranjang kosong) */
-        right: 20px;
+        position: fixed; bottom: 30px; right: 20px;
         width: 45px; height: 45px; border-radius: 50%;
-        background-color: rgba(0, 170, 255, 0.3); /* Transparan */
+        background-color: rgba(0, 170, 255, 0.3);
         color: rgba(255, 255, 255, 0.9) !important;
         text-align: center; line-height: 45px; font-size: 22px;
         text-decoration: none; z-index: 999990;
-        backdrop-filter: blur(2px);
-        transition: all 0.3s ease;
+        backdrop-filter: blur(2px); transition: all 0.3s ease;
         border: 1px solid rgba(255, 255, 255, 0.4);
     }
     .back-to-top:hover {
-        background-color: #00AAFF;
-        color: white !important;
-        transform: translateY(-5px);
-        opacity: 1;
+        background-color: #00AAFF; color: white !important;
+        transform: translateY(-5px); opacity: 1;
     }
-    
-    /* ANIMASI NAIK KALAU ADA KERANJANG */
-    /* Kelas ini akan disuntikkan Python jika keranjang > 0 */
-    .back-to-top.naik {
-        bottom: 100px !important; /* Naik ke atas Floating Bar */
-    }
+    .back-to-top.naik { bottom: 100px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -342,6 +320,7 @@ elif menu == "🛍️ Pesan Barang":
                                 if url:
                                     items_str = ", ".join([f"{x['qty']}x {x['nama']}" for x in st.session_state.keranjang])
                                     resi = generate_resi()
+                                    # SUPABASE akan otomatis mengisi created_at
                                     data = {
                                         "nama_pemesan": pemesan, "untuk_siapa": untuk, "nomor_wa": wa,
                                         "item_pesanan": items_str, "total_harga": total_duit,
@@ -364,21 +343,13 @@ elif menu == "🛍️ Pesan Barang":
                                 else: st.error("Gagal upload.")
                             except Exception as e: st.error(f"Error: {e}")
 
-    # --- LOGIKA TOMBOL MELAYANG (FLOATING BUTTONS) ---
-    
-    # 1. Tentukan Kelas CSS untuk tombol Back to Top
-    # Jika Keranjang > 0, kita pakai class 'naik' agar posisinya lebih tinggi
+    # --- TOMBOL MELAYANG ---
     class_tambahan = "naik" if total_duit > 0 else ""
-
-    # 2. Render Tombol Back to Top (HTML)
     st.markdown(f'<a href="#paling-atas" class="back-to-top {class_tambahan}">⬆️</a>', unsafe_allow_html=True)
 
-    # 3. Render Floating Cart Bar (Python Container dengan CSS Hack)
     if total_duit > 0:
         with st.container(border=True):
-            # Marker ini yang membuat container ini melayang (cek CSS di atas)
             st.markdown('<span class="floating-bar-marker"></span>', unsafe_allow_html=True)
-            
             c_float_1, c_float_2 = st.columns([1.5, 1], vertical_alignment="center")
             with c_float_1:
                 st.markdown(f"<div style='font-size:14px; font-weight:bold; color:#333;'>Total: {format_rupiah(total_duit)}</div>", unsafe_allow_html=True)
@@ -388,7 +359,7 @@ elif menu == "🛍️ Pesan Barang":
                     show_cart_modal()
 
 # =========================================
-# 3. LACAK PESANAN
+# 3. LACAK PESANAN (LOGIKA TIMER 4 JAM)
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
@@ -403,26 +374,60 @@ elif menu == "🔍 Lacak Pesanan":
             st.success(f"Status: {d['status']}")
             st.write(f"Item: {d['item_pesanan']}")
             
+            # --- LOGIKA PEMBATALAN ---
             if d['status'] == "Menunggu Verifikasi":
-                st.warning("Bisa dibatalkan.")
-                if st.button("Batalkan & Refund"):
-                    try:
-                        refund = 0
-                        for i_str in d['item_pesanan'].split(", "):
-                            q, n = i_str.split("x ", 1)
-                            q = int(q)
-                            cur = supabase.table("barang").select("*").eq("nama_barang", n).execute()
-                            if cur.data:
-                                supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
-                                refund += cur.data[0]['harga']*q
+                st.divider()
+                st.warning("⚠️ Opsi Pembatalan")
+                
+                # 1. Ambil Waktu Pesan (UTC) dan Parse
+                # Supabase format: 2024-01-24T10:00:00.123+00:00
+                try:
+                    # Ganti 'Z' dengan '+00:00' jika perlu, untuk jaga-jaga
+                    waktu_pesan_str = d['created_at'].replace('Z', '+00:00')
+                    waktu_pesan = datetime.fromisoformat(waktu_pesan_str)
+                    
+                    # Waktu sekarang (UTC juga agar adil)
+                    waktu_sekarang = datetime.now(timezone.utc)
+                    
+                    # Selisih waktu
+                    selisih = waktu_sekarang - waktu_pesan
+                    batas_waktu = timedelta(hours=4)
+                    
+                    if selisih >= batas_waktu:
+                        # JIKA SUDAH LEBIH 4 JAM -> BOLEH BATAL
+                        st.error("Admin belum merespon dalam 4 jam. Anda berhak membatalkan pesanan.")
                         
-                        supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
-                        vcr = buat_voucher_image(d['nama_pemesan'], refund, d['no_resi'])
-                        b64_v = image_to_base64(vcr)
-                        st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
-                        st.download_button("Download Voucher", vcr, f"V_{d['no_resi']}.jpg", "image/jpeg")
-                        del st.session_state.resi_aktif
-                        st.stop()
-                    except: st.error("Gagal.")
+                        if st.button("❌ Batalkan & Refund Sekarang"):
+                            try:
+                                refund = 0
+                                for i_str in d['item_pesanan'].split(", "):
+                                    q, n = i_str.split("x ", 1)
+                                    q = int(q)
+                                    cur = supabase.table("barang").select("*").eq("nama_barang", n).execute()
+                                    if cur.data:
+                                        supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
+                                        refund += cur.data[0]['harga']*q
+                                
+                                supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
+                                vcr = buat_voucher_image(d['nama_pemesan'], refund, d['no_resi'])
+                                b64_v = image_to_base64(vcr)
+                                st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
+                                st.download_button("Download Voucher", vcr, f"V_{d['no_resi']}.jpg", "image/jpeg")
+                                del st.session_state.resi_aktif
+                                st.stop()
+                            except Exception as e: st.error(f"Gagal: {e}")
+                    else:
+                        # JIKA BELUM 4 JAM -> TAMPILKAN TIMER MUNDUR (STATIS)
+                        sisa = batas_waktu - selisih
+                        jam, sisa_detik = divmod(sisa.seconds, 3600)
+                        menit, _ = divmod(sisa_detik, 60)
+                        
+                        st.info(f"⏳ Tombol batal akan muncul jika status tidak berubah dalam 4 jam.")
+                        st.caption(f"Sisa waktu tunggu: **{jam} Jam {menit} Menit** lagi.")
+                        
+                except Exception as e:
+                    # Fallback jika error parsing tanggal (jarang terjadi)
+                    st.write(f"Error tanggal: {e}")
+
         else:
             st.error("Tidak ditemukan.")
