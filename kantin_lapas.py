@@ -386,12 +386,16 @@ elif menu == "🛍️ Pesan Barang":
                                         items_str = ", ".join([f"{x['qty']}x {x['nama']}" for x in st.session_state.keranjang])
                                         resi = generate_resi()
                                         
-                                        # SUPABASE akan otomatis mengisi created_at
+                                        # PERBAIKAN: PAKSA KIRIM WAKTU DARI PYTHON
+                                        # Supaya tidak ada lagi "Menunggu sinkronisasi"
+                                        waktu_sekarang_iso = datetime.now(timezone.utc).isoformat()
+                                        
                                         data = {
                                             "nama_pemesan": pemesan, "untuk_siapa": untuk, "nomor_wa": wa,
                                             "item_pesanan": items_str, "total_harga": total_duit,
                                             "bukti_transfer": url, "status": "Menunggu Verifikasi",
-                                            "cara_bayar": bayar, "no_resi": resi
+                                            "cara_bayar": bayar, "no_resi": resi,
+                                            "created_at": waktu_sekarang_iso # << TAMBAHAN PENTING
                                         }
                                         supabase.table("pesanan").insert(data).execute()
                                         
@@ -401,8 +405,6 @@ elif menu == "🛍️ Pesan Barang":
                                                 supabase.table("barang").update({"stok": curr.data[0]['stok'] - x['qty']}).eq("nama_barang", x['nama']).execute()
 
                                         nota = buat_struk_image(data, st.session_state.keranjang, total_duit, resi)
-                                        
-                                        # SIMPAN STATE DAN RERUN AGAR KELUAR DARI FORM
                                         st.session_state.nota_sukses = { 'data': nota, 'resi': resi }
                                         reset_keranjang()
                                         st.rerun()
@@ -443,8 +445,6 @@ elif menu == "🔍 Lacak Pesanan":
             if d['status'] == "Menunggu Verifikasi":
                 st.divider()
                 st.warning("⚠️ Opsi Pembatalan")
-                
-                # --- UPDATE TEXT & LOGIKA TIMER DI SINI ---
                 st.info("ℹ️ **Kebijakan Pembatalan:** Anda dapat membatalkan pesanan jika Admin tidak memproses pesanan selama **4 Jam**.")
                 
                 try:
@@ -485,8 +485,6 @@ elif menu == "🔍 Lacak Pesanan":
                             total_detik = int(sisa.total_seconds())
                             jam, sisa_detik = divmod(total_detik, 3600)
                             menit, _ = divmod(sisa_detik, 60)
-                            
-                            # TAMPILAN HITUNG MUNDUR (TIMER)
                             st.warning(f"⏳ **Hitung Mundur:** Tombol batal akan muncul dalam **{jam} Jam {menit} Menit**.")
                             
                 except Exception as e:
