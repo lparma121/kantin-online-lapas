@@ -7,7 +7,7 @@ import random
 import string
 import base64
 from datetime import datetime, timedelta, timezone
-import streamlit.components.v1 as components  # PENTING: Import ini untuk fitur auto-copy
+import streamlit.components.v1 as components
 
 # --- KONEKSI DATABASE ---
 try:
@@ -89,7 +89,7 @@ st.markdown("""
         background-color: #00AAFF !important; border: none !important;
     }
 
-    /* 5. BACK TO TOP */
+    /* 5. BACK TO TOP (GHOST MODE) */
     .back-to-top {
         position: fixed; bottom: 30px; right: 20px;
         width: 45px; height: 45px; border-radius: 50%;
@@ -129,7 +129,6 @@ def upload_file_bytes(file_bytes, folder, nama_file):
 
 # --- JURUS JAVA SCRIPT: KLIK UNTUK COPY RESI ---
 def tampilkan_resi_copy_otomatis(resi_text):
-    # Ini adalah HTML + JS yang disuntikkan ke Streamlit
     html_code = f"""
     <div onclick="copyText()" style="
         cursor: pointer;
@@ -426,7 +425,7 @@ elif menu == "🛍️ Pesan Barang":
                     show_cart_modal()
 
 # =========================================
-# 3. LACAK PESANAN
+# 3. LACAK PESANAN (LOGIKA TIMER 4 JAM & TEXT BARU)
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
@@ -445,12 +444,14 @@ elif menu == "🔍 Lacak Pesanan":
                 st.divider()
                 st.warning("⚠️ Opsi Pembatalan")
                 
+                # --- UPDATE TEXT & LOGIKA TIMER DI SINI ---
+                st.info("ℹ️ **Kebijakan Pembatalan:** Anda dapat membatalkan pesanan jika Admin tidak memproses pesanan selama **4 Jam**.")
+                
                 try:
-                    # FIX: Ambil created_at dengan aman (gunakan .get)
                     waktu_str = d.get('created_at')
                     
                     if not waktu_str:
-                        st.info("🕒 Menunggu verifikasi admin.")
+                        st.caption("Menunggu sinkronisasi waktu server...")
                     else:
                         waktu_pesan_str = waktu_str.replace('Z', '+00:00')
                         waktu_pesan = datetime.fromisoformat(waktu_pesan_str)
@@ -459,7 +460,7 @@ elif menu == "🔍 Lacak Pesanan":
                         batas_waktu = timedelta(hours=4)
                         
                         if selisih >= batas_waktu:
-                            st.error("Admin lambat. Anda berhak membatalkan pesanan.")
+                            st.error("Waktu tunggu 4 jam terlewati. Silakan batalkan jika perlu.")
                             if st.button("❌ Batalkan & Refund Sekarang"):
                                 try:
                                     refund = 0
@@ -481,12 +482,14 @@ elif menu == "🔍 Lacak Pesanan":
                                 except Exception as e: st.error(f"Gagal: {e}")
                         else:
                             sisa = batas_waktu - selisih
-                            jam, sisa_detik = divmod(sisa.seconds, 3600)
+                            total_detik = int(sisa.total_seconds())
+                            jam, sisa_detik = divmod(total_detik, 3600)
                             menit, _ = divmod(sisa_detik, 60)
-                            st.info(f"⏳ Tombol batal muncul jika status tetap dalam 4 jam.")
-                            st.caption(f"Sisa waktu: **{jam} Jam {menit} Menit**.")
+                            
+                            # TAMPILAN HITUNG MUNDUR (TIMER)
+                            st.warning(f"⏳ **Hitung Mundur:** Tombol batal akan muncul dalam **{jam} Jam {menit} Menit**.")
                             
                 except Exception as e:
-                    st.write(f"Error parsing tanggal: {e}")
+                    st.write(f"Error sistem waktu: {e}")
         else:
             st.error("Tidak ditemukan.")
