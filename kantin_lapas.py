@@ -251,14 +251,21 @@ with st.sidebar:
 menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "🔍 Lacak Pesanan"])
 
 # =========================================
-# 1. BERANDA
+# 1. BERANDA (FIX BANNER)
 # =========================================
 if menu == "🏠 Beranda":
-    c_kiri, c_tengah, c_kanan = st.columns([0.5, 3, 0.5])
+    c_kiri, c_tengah, c_kanan = st.columns([0.1, 3, 0.1]) # Atur lebar agar pas di tengah
     with c_tengah:
-        st.image("https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg", use_container_width=True)
+        # --- GANTI st.image DENGAN INI ---
+        # Kita pakai HTML <img> agar tidak kena efek "Kotak" dari CSS Etalase
+        st.markdown("""
+        <img src="https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg" 
+             style="width: 100%; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        """, unsafe_allow_html=True)
+        # ---------------------------------
     
     st.write("") 
+    # ... (lanjut ke kode teks sambutan di bawahnya) ...
     st.markdown("""
     <div style='text-align: center; font-size: 18px;'>
         Selamat datang di era baru pelayanan <b>Lapas Arga Makmur</b>.<br>
@@ -532,7 +539,13 @@ elif menu == "🛍️ Pesan Barang":
                             st.success("🎉 Pesanan Berhasil Dikirim!")
                             st.markdown("**👇 Salin Nomor Resi Ini:**")
                             st.code(no_resi, language=None)
-                            st.image(file_nota, caption="Nota Resmi", width=300)
+                            import base64
+                            def image_to_base64(img_bytes):
+                                return base64.b64encode(img_bytes).decode()
+                            
+                            img_b64 = image_to_base64(file_nota)
+                            st.markdown(f'<img src="data:image/jpeg;base64,{img_b64}" style="width: 300px; border-radius: 10px; border: 1px solid #ddd;">', unsafe_allow_html=True)
+                            
                             st.download_button("📥 Download Nota (JPG)", data=file_nota, file_name=f"{no_resi}.jpg", mime="image/jpeg")
                             
                         except Exception as e:
@@ -596,8 +609,15 @@ elif menu == "🔍 Lacak Pesanan":
                         
                         st.balloons()
                         st.success("✅ Pesanan Dibatalkan!")
-                        st.image(gambar_voucher, caption="Voucher Pengganti Uang", width=400)
-                        st.download_button("📥 Download Voucher (JPG)", data=gambar_voucher, file_name=f"VOUCHER_{d['no_resi']}.jpg", mime="image/jpeg")
+                        st.markdown("### 🎫 VOUCHER ANDA (PENTING!)")
+                        
+                        # GANTI st.image(gambar_voucher) DENGAN INI:
+                        import base64
+                        img_v_b64 = base64.b64encode(gambar_voucher).decode()
+                        st.markdown(f'<img src="data:image/jpeg;base64,{img_v_b64}" style="width: 100%; max-width: 400px; border-radius: 10px; border: 2px dashed #00AAFF;">', unsafe_allow_html=True)
+                        
+                        st.warning("👇 **SILAKAN DOWNLOAD GAMBAR DI BAWAH INI**")
+                        # ... (lanjut tombol download) ...
                         
                         if 'resi_aktif' in st.session_state: del st.session_state['resi_aktif']
                         st.stop()
@@ -605,4 +625,5 @@ elif menu == "🔍 Lacak Pesanan":
                         st.error(f"Gagal membatalkan. Error: {e}")
         else:
             st.error("Nomor Resi tidak ditemukan.")
+
 
