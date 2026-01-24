@@ -20,13 +20,12 @@ st.set_page_config(page_title="e-PAS Mart | Belanja Cepat & Aman", page_icon="�
 # --- TITIK JANGKAR SCROLL KE ATAS ---
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
-# --- CSS CUSTOM FINAL V4 (ANTI-STACKING HP) ---
+# --- CSS GRID 2 KOLOM DI HP & POPUP ---
 st.markdown("""
 <style>
-    /* 1. GLOBAL */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
     html, body, [class*="css"]  { font-family: 'Poppins', sans-serif; }
-    
+
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 5rem !important;
@@ -34,83 +33,75 @@ st.markdown("""
         padding-right: 0.5rem !important;
     }
 
-    /* 2. TOMBOL GLOBAL */
-    .stButton>button {
-        width: 100%;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        background: linear-gradient(90deg, #00AAFF 0%, #0077CC 100%);
-        color: white !important;
-        border: none !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        height: auto !important;
-        padding: 5px 10px;
+    /* 1. TOMBOL BELI (KECIL & RAPI) */
+    .btn-beli {
+        border: 1px solid #00AAFF;
+        color: #00AAFF;
+        background: white;
+        border-radius: 5px;
+        text-align: center;
+        padding: 5px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 12px;
+        transition: 0.2s;
     }
+    .btn-beli:hover { background: #00AAFF; color: white; }
 
-    /* 3. GAMBAR & KARTU */
+    /* 2. STYLE GAMBAR & KARTU */
     div[data-testid="stImage"] img {
         width: 100% !important;
+        aspect-ratio: 1/1; /* Gambar Kotak Sempurna */
         object-fit: cover !important;
         border-radius: 8px 8px 0 0 !important;
     }
     
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        border: 1px solid #f0f0f0;
-        padding: 10px !important;
+        padding: 0px !important; /* Hilangkan padding dalam kartu */
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border: 1px solid #eee;
+        overflow: hidden; /* Agar gambar tidak keluar */
     }
 
+    /* 3. TEKS PRODUK */
+    .info-box { padding: 8px; }
     .nama-produk { 
-        font-weight: 600; color: #2c3e50;
+        font-size: 13px; font-weight: 600; color: #333;
+        line-height: 1.3; height: 34px; /* Batasi 2 baris */
         overflow: hidden; display: -webkit-box; 
         -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
-        margin-top: 5px; margin-bottom: 5px;
-        line-height: 1.2;
+        margin-bottom: 4px;
     }
+    .harga-produk { color: #00AAFF; font-weight: 700; font-size: 14px; }
+    .stok-produk { font-size: 10px; color: #888; margin-bottom: 8px; }
 
-    /* === KHUSUS LAPTOP === */
-    @media (min-width: 641px) {
-        div[data-testid="stImage"] img { height: 160px !important; }
-    }
-
-    /* === KHUSUS HP (INTI PERBAIKAN) === */
+    /* 4. JURUS PAKSA 2 KOLOM DI HP */
     @media (max-width: 640px) {
-        /* A. Gambar Kecil */
-        div[data-testid="stImage"] img { height: 110px !important; }
-        .nama-produk { font-size: 13px !important; height: 35px !important; }
-
-        /* B. PAKSA KOLOM SEJAJAR (NO WRAP) */
-        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] {
-            flex-direction: row !important; /* Paksa baris ke samping */
-            flex-wrap: nowrap !important;   /* Dilarang turun baris */
-            gap: 4px !important;            /* Jarak antar tombol tipis */
-        }
-
-        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="column"] {
-            min-width: 0px !important; /* INI KUNCINYA: Hapus batas minimal lebar */
-            width: 33% !important;     /* Bagi 3 rata */
-            flex: 1 !important;        /* Flexible */
+        /* Kecilkan gap antar kolom */
+        div[data-testid="column"] {
+            width: 50% !important; /* Paksa lebar 50% */
+            flex: 0 0 50% !important;
+            max-width: 50% !important;
+            padding: 0 4px !important; /* Jarak kiri kanan tipis */
         }
         
-        /* C. Tombol HP didesain ulang */
-        .stButton>button {
-            padding: 0px !important;    /* Hapus padding dalam tombol */
-            height: 32px !important;    /* Tinggi tombol fix */
-            min-height: 32px !important;
-            font-size: 14px !important;
-            line-height: 32px !important;
-            margin: 0 !important;
+        /* Container utama kolom dipaksa wrapping */
+        div[data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap !important;
         }
         
-        div[data-testid="column"] button:contains("−") {
-            background: #eef2f5 !important;
-            color: #333 !important;
+        /* Tombol Streamlit di dalam kartu */
+        .stButton > button {
+            font-size: 12px !important;
+            padding: 4px 0 !important;
+            height: 30px !important;
+            min-height: 30px !important;
         }
     }
     
-    /* 4. FLOATING CART */
+    /* 5. FLOATING CART */
     .floating-total {
         position: fixed; bottom: 15px; left: 2.5%; width: 95%;
         background: rgba(255, 255, 255, 0.98);
@@ -227,19 +218,13 @@ def upload_file_bytes(file_bytes, folder, nama_file):
         return supabase.storage.from_("KANTIN-ASSETS").get_public_url(path)
     except Exception as e: return None
 
-# --- SESSION STATE KERANJANG ---
+# --- SESSION STATE KERANJANG (UPDATE STRUKTUR DATA) ---
+# Format data sekarang: {"id": 1, "nama": "Kopi", "harga": 5000, "qty": 2}
 if 'keranjang' not in st.session_state: st.session_state.keranjang = []
 
-def tambah_ke_keranjang(item, harga):
-    st.session_state.keranjang.append({"nama": item, "harga": harga})
-
-def kurangi_dari_keranjang(nama_item):
-    for index, item in enumerate(st.session_state.keranjang):
-        if item['nama'] == nama_item:
-            del st.session_state.keranjang[index]
-            break
-
 def reset_keranjang(): st.session_state.keranjang = []
+
+# (Fungsi tambah/kurang lama boleh dihapus karena sudah diganti logic popup)
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -307,7 +292,8 @@ if menu == "🏠 Beranda":
 # 2. PESAN BARANG
 # =========================================
 elif menu == "🛍️ Pesan Barang":
-    total_duit = sum(i['harga'] for i in st.session_state.keranjang)
+    # Hitung total: Harga * Qty
+    total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
     
     # --- CSS BUTTON BACK TO TOP ---
     st.markdown("""
@@ -344,70 +330,97 @@ elif menu == "🛍️ Pesan Barang":
 
     tab_menu, tab_checkout = st.tabs(["🍔 Pilih Menu", "💳 Pembayaran"])
 
-    # === TAB 1: ETALASE MENU (SUDAH DIPERBAIKI) ===
+    # === TAB 1: ETALASE MENU (GRID 2 KOLOM & POPUP) ===
     with tab_menu:
-        st.markdown("""
-        <style>
-            div[data-testid="stImage"] img { height: 150px !important; object-fit: cover !important; border-radius: 10px 10px 0 0 !important; }
-            .nama-produk { font-size: 14px; font-weight: bold; line-height: 1.2; height: 35px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 5px; }
-        </style>
-        """, unsafe_allow_html=True)
-
         st.header("🛍️ Etalase")
         
-        # --- DEFINISI FUNGSI FRAGMENT ---
+        # --- A. DEFINISI POP-UP (DIALOG) ---
+        # Ini akan muncul saat tombol diklik
+        @st.dialog("🛒 Masukkan Keranjang")
+        def popup_beli(item):
+            c1, c2 = st.columns([1, 2])
+            with c1:
+                img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
+                st.image(img, use_container_width=True)
+            with c2:
+                st.subheader(item['nama_barang'])
+                st.markdown(f"**{format_rupiah(item['harga'])}**")
+                st.caption(f"Sisa Stok: {item['stok']}")
+            
+            st.divider()
+            
+            # Cek qty yang sudah ada di keranjang
+            current_qty = sum(x['qty'] for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
+            
+            # INPUT JUMLAH (Ketik Manual / Tombol Plus Minus)
+            jumlah = st.number_input("Jumlah Pesan:", 
+                                     min_value=0, 
+                                     max_value=item['stok'], 
+                                     value=current_qty if current_qty > 0 else 1,
+                                     step=1)
+            
+            if st.button("✅ Simpan ke Keranjang", type="primary", use_container_width=True):
+                if jumlah > 0:
+                    # Update keranjang (Hapus dulu yang lama, masukkan yang baru)
+                    # 1. Hapus item lama
+                    st.session_state.keranjang = [x for x in st.session_state.keranjang if x['nama'] != item['nama_barang']]
+                    # 2. Masukkan item baru
+                    st.session_state.keranjang.append({
+                        "id": item['id'],
+                        "nama": item['nama_barang'], 
+                        "harga": item['harga'],
+                        "qty": jumlah
+                    })
+                    st.rerun() # Tutup popup & refresh
+                else:
+                    # Jika user isi 0, berarti hapus dari keranjang
+                    st.session_state.keranjang = [x for x in st.session_state.keranjang if x['nama'] != item['nama_barang']]
+                    st.rerun()
+
+        # --- B. TAMPILAN KARTU (SIMPLE) ---
         @st.fragment
-        def kartu_produk_live(item):
+        def kartu_produk_simple(item):
+            # Container Kartu
             with st.container(border=True):
-                # 1. Gambar
+                # 1. Gambar Full Width
                 img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
                 st.image(img, use_container_width=True)
                 
-                # 2. Judul & Info
+                # 2. Info Produk (Padding)
                 st.markdown(f"""
-                <div class="nama-produk">{item['nama_barang']}</div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="color:#00AAFF; font-weight:700; font-size:15px;">{format_rupiah(item['harga'])}</div>
-                    <div style="font-size:10px; color:#555; background:#f0f2f6; padding: 3px 6px; border-radius:4px;">
-                        Stok: {item['stok']}
-                    </div>
+                <div class="info-box">
+                    <div class="nama-produk">{item['nama_barang']}</div>
+                    <div class="harga-produk">{format_rupiah(item['harga'])}</div>
+                    <div class="stok-produk">Stok: {item['stok']}</div>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # 3. Tombol (+ -)
-                qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
+                # 3. Tombol Beli (Memicu Popup)
+                qty_ada = sum(x['qty'] for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
+                label_btn = f"✅ {qty_ada} di Keranjang" if qty_ada > 0 else "Tambah +"
+                type_btn = "primary" if qty_ada > 0 else "secondary"
                 
-                c_min, c_val, c_plus = st.columns([1, 1, 1], gap="small")
-                
-                with c_min:
-                    if st.button("−", key=f"min_{item['id']}"): 
-                        if qty_di_keranjang > 0:
-                            kurangi_dari_keranjang(item['nama_barang'])
-                            st.rerun()
-                with c_val:
-                    st.markdown(f"<div style='text-align:center; font-weight:bold; font-size:16px; line-height:35px;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
-                with c_plus:
-                    if st.button("➕", key=f"plus_{item['id']}"):
-                        if qty_di_keranjang < item['stok']:
-                            tambah_ke_keranjang(item['nama_barang'], item['harga'])
-                            st.rerun()
-                        else:
-                            st.toast("Habis!", icon="⚠️")
-        
-        # --- (BAGIAN INI YANG HILANG SEBELUMNYA) LOAD DATA & TAMPILKAN ---
+                if st.button(label_btn, key=f"btn_{item['id']}", type=type_btn, use_container_width=True):
+                    popup_beli(item)
+
+        # --- C. LOAD DATA & GRID LOOP ---
         res_b = supabase.table("barang").select("*").gt("stok", 0).order('nama_barang').execute()
         items = res_b.data
         
         if items:
-            cols = st.columns(2) # Grid 2 Kolom
-            for i, item in enumerate(items):
-                with cols[i % 2]:
-                    kartu_produk_live(item)
+            # MEMBUAT GRID 2 KOLOM (Kiri & Kanan)
+            # Karena CSS di atas sudah memaksa lebar 50%, kita pakai st.columns(2) standar saja
+            rows = [items[i:i + 2] for i in range(0, len(items), 2)]
             
-            st.write("\n" * 8) # Spasi agar tidak ketutup tombol floating
+            for row in rows:
+                cols = st.columns(2) # Akan dipaksa 50%-50% oleh CSS di HP
+                for i, item in enumerate(row):
+                    with cols[i]:
+                        kartu_produk_simple(item)
+            
+            st.write("\n" * 8)
         else:
             st.info("Belum ada barang tersedia.")
-        # -----------------------------------------------------------------
 
     # === TAB 2: CHECKOUT ===
     with tab_checkout:
@@ -592,3 +605,4 @@ elif menu == "🔍 Lacak Pesanan":
                         st.error(f"Gagal membatalkan. Error: {e}")
         else:
             st.error("Nomor Resi tidak ditemukan.")
+
