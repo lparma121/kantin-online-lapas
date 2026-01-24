@@ -19,6 +19,7 @@ except:
 st.set_page_config(page_title="e-PAS Mart", page_icon="🛍️", layout="wide")
 
 # --- TITIK JANGKAR SCROLL KE ATAS ---
+# Ini target tujuan saat tombol diklik
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
 # --- CSS CUSTOM LENGKAP ---
@@ -29,7 +30,7 @@ st.markdown("""
 
     .block-container {
         padding-top: 1rem !important;
-        padding-bottom: 7rem !important; /* Tambah padding bawah biar tidak ketutup Floating Bar */
+        padding-bottom: 7rem !important; /* Ruang untuk Floating Bar */
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
     }
@@ -75,35 +76,50 @@ st.markdown("""
     }
 
     /* 4. JURUS FLOATING BOTTOM BAR (KERANJANG MELAYANG) */
-    /* Kita targetkan container khusus yang punya class 'floating-bar-container' */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) {
-        position: fixed;
-        bottom: 20px;
-        left: 2.5%;
-        width: 95%;
-        z-index: 999999;
-        background: white;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        border-radius: 15px;
-        border: 1px solid #00AAFF;
-        padding: 10px !important;
-        margin: 0 !important;
+        position: fixed; bottom: 20px; left: 2.5%; width: 95%; z-index: 999999;
+        background: white; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        border-radius: 15px; border: 1px solid #00AAFF;
+        padding: 10px !important; margin: 0 !important;
     }
-    
-    /* Tombol di dalam Floating Bar */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) button {
-        border-radius: 50px !important;
-        height: 40px !important;
+        border-radius: 50px !important; height: 40px !important;
     }
 
-    /* Back to Top */
+    /* 5. BACK TO TOP (MINIMALIS & SAMAR) */
     .back-to-top {
-        position: fixed; bottom: 100px; right: 20px;
-        background-color: #00AAFF; color: white !important;
-        width: 40px; height: 40px; border-radius: 50%;
-        text-align: center; line-height: 40px; font-size: 20px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 999999;
-        text-decoration: none; display: block; border: 2px solid white;
+        position: fixed; 
+        bottom: 100px; /* Posisi di atas Floating Bar */
+        right: 20px;
+        
+        /* Tampilan Bulat Kecil */
+        width: 40px; 
+        height: 40px; 
+        border-radius: 50%;
+        
+        /* Warna Biru Transparan (Biar tidak semak) */
+        background-color: rgba(0, 170, 255, 0.4); 
+        color: white !important;
+        
+        /* Teks Icon Tengah */
+        text-align: center; 
+        line-height: 40px; 
+        font-size: 20px;
+        
+        /* Hilangkan Dekorasi Link */
+        text-decoration: none; 
+        z-index: 999999;
+        
+        /* Efek Halus */
+        backdrop-filter: blur(2px);
+        transition: all 0.3s ease;
+    }
+    
+    /* Saat Disentuh/Hover jadi Terang */
+    .back-to-top:hover {
+        background-color: rgba(0, 170, 255, 1); /* Jadi Biru Jelas */
+        transform: translateY(-3px); /* Efek naik dikit */
+        box-shadow: 0 4px 10px rgba(0,170,255,0.4);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -203,15 +219,14 @@ if menu == "🏠 Beranda":
 # 2. PESAN BARANG
 # =========================================
 elif menu == "🛍️ Pesan Barang":
-    # Header Bersih
+    # Header
     st.markdown("<h2 style='margin-bottom:10px;'>🛍️ Etalase</h2>", unsafe_allow_html=True)
 
     # Hitung total
     total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
     total_qty = sum(item['qty'] for item in st.session_state.keranjang)
 
-    # --- DEFINISI MODAL (DIALOG) KERANJANG ---
-    # Ini yang akan muncul saat tombol melayang diklik
+    # --- DEFINISI MODAL KERANJANG ---
     @st.dialog("🛒 Keranjang Belanja")
     def show_cart_modal():
         if not st.session_state.keranjang:
@@ -225,10 +240,8 @@ elif menu == "🛍️ Pesan Barang":
                     if c3.button("🗑️", key=f"del_m_{i}"):
                         del st.session_state.keranjang[i]
                         st.rerun()
-            
             st.divider()
             st.markdown(f"#### Total: {format_rupiah(total_duit)}")
-            
             if st.button("💳 Lanjut Pembayaran", type="primary", use_container_width=True):
                  st.toast("Silakan klik Tab 'Pembayaran'", icon="✅")
 
@@ -237,7 +250,7 @@ elif menu == "🛍️ Pesan Barang":
 
     # === TAB 1: ETALASE ===
     with tab_menu:
-        # 1. Popup Tambah Barang
+        # 1. Popup Tambah
         @st.dialog("Masukkan Jumlah")
         def popup_add(item):
             c1, c2 = st.columns([1, 2])
@@ -354,25 +367,19 @@ elif menu == "🛍️ Pesan Barang":
                                 else: st.error("Gagal upload.")
                             except Exception as e: st.error(f"Error: {e}")
 
-    # --- TOMBOL MELAYANG (FLOATING ACTION BUTTON) ---
-    # Ini triknya: Kita buat Container khusus di bawah, lalu kita 'paksa' posisinya dengan CSS
+    # --- TOMBOL MELAYANG BAWAH (KERANJANG) ---
     if total_duit > 0:
         with st.container(border=True):
-            # Marker untuk CSS agar container ini yang melayang
             st.markdown('<span class="floating-bar-marker"></span>', unsafe_allow_html=True)
-            
             c_float_1, c_float_2 = st.columns([1.5, 1], vertical_alignment="center")
-            
             with c_float_1:
                 st.markdown(f"<div style='font-size:14px; font-weight:bold;'>Total: {format_rupiah(total_duit)}</div>", unsafe_allow_html=True)
                 st.caption(f"{total_qty} Barang")
-                
             with c_float_2:
-                # Saat tombol ini diklik, Dialog Modal akan muncul
                 if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                     show_cart_modal()
 
-    # Back to Top
+    # --- TOMBOL KEMBALI KE ATAS (SEMI-TRANSPARAN) ---
     st.markdown('<a href="#paling-atas" class="back-to-top">⬆️</a>', unsafe_allow_html=True)
 
 # =========================================
