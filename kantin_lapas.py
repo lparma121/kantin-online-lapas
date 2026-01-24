@@ -29,12 +29,12 @@ st.markdown("""
 
     .block-container {
         padding-top: 1rem !important;
-        padding-bottom: 7rem !important; /* Ruang jaga-jaga untuk Floating Bar */
+        padding-bottom: 8rem !important; /* Ruang lebih besar di bawah */
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
     }
 
-    /* 1. STYLE GAMBAR & KARTU */
+    /* 1. GAMBAR & KARTU */
     div[data-testid="stImage"] img {
         width: 100% !important;
         aspect-ratio: 1/1; 
@@ -49,19 +49,7 @@ st.markdown("""
         border: 1px solid #eee; overflow: hidden;
     }
 
-    /* 2. TEKS PRODUK */
-    .info-box { padding: 8px; }
-    .nama-produk { 
-        font-size: 13px; font-weight: 600; color: #333;
-        line-height: 1.3; height: 34px; 
-        overflow: hidden; display: -webkit-box; 
-        -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
-        margin-bottom: 4px;
-    }
-    .harga-produk { color: #00AAFF; font-weight: 700; font-size: 14px; }
-    .stok-produk { font-size: 10px; color: #888; margin-bottom: 8px; }
-
-    /* 3. GRID 2 KOLOM DI HP */
+    /* 2. GRID 2 KOLOM DI HP */
     @media (max-width: 640px) {
         div[data-testid="column"] {
             width: 50% !important; flex: 0 0 50% !important;
@@ -74,41 +62,69 @@ st.markdown("""
         }
     }
 
-    /* 4. FLOATING BOTTOM BAR (KERANJANG MELAYANG) */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) {
-        position: fixed; bottom: 20px; left: 2.5%; width: 95%; z-index: 999999;
-        background: white; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        border-radius: 15px; border: 1px solid #00AAFF;
-        padding: 10px !important; margin: 0 !important;
+    /* 3. TEKS PRODUK */
+    .info-box { padding: 8px; }
+    .nama-produk { 
+        font-size: 13px; font-weight: 600; color: #333;
+        line-height: 1.3; height: 34px; 
+        overflow: hidden; display: -webkit-box; 
+        -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
+        margin-bottom: 4px;
     }
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) button {
-        border-radius: 50px !important; height: 40px !important;
-    }
+    .harga-produk { color: #00AAFF; font-weight: 700; font-size: 14px; }
+    .stok-produk { font-size: 10px; color: #888; margin-bottom: 8px; }
 
-    /* 5. BACK TO TOP (UPDATE POSISI & GHOST MODE) */
-    .back-to-top {
+    /* 4. FLOATING BOTTOM BAR (KERANJANG MELAYANG) */
+    /* Ini trik CSS untuk membuat st.container melayang di bawah */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) {
         position: fixed; 
-        bottom: 30px; /* POSISI DEFAULT: Di Kanan Bawah */
-        right: 20px;
-        
-        width: 45px; height: 45px; border-radius: 50%;
-        background-color: rgba(0, 170, 255, 0.3); /* Transparan (Ghost) */
-        color: rgba(255, 255, 255, 0.8) !important;
-        
-        text-align: center; line-height: 45px; font-size: 22px;
-        text-decoration: none; z-index: 999990; /* Di bawah Z-index Floating Bar */
-        backdrop-filter: blur(2px);
-        transition: all 0.3s ease;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        bottom: 15px; 
+        left: 2.5%; 
+        width: 95%; 
+        z-index: 999999;
+        background: white; 
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        border-radius: 15px; 
+        border: 1px solid #00AAFF;
+        padding: 10px 15px !important; 
+        margin: 0 !important;
+        display: flex;
+        align-items: center;
     }
     
-    /* Efek saat disentuh/hover */
+    /* Tombol di dalam Floating Bar */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) button {
+        border-radius: 50px !important; 
+        height: 40px !important;
+        background-color: #00AAFF !important;
+        border: none !important;
+    }
+
+    /* 5. BACK TO TOP (GHOST MODE) */
+    .back-to-top {
+        position: fixed; 
+        bottom: 30px; /* Posisi Default (Kalau keranjang kosong) */
+        right: 20px;
+        width: 45px; height: 45px; border-radius: 50%;
+        background-color: rgba(0, 170, 255, 0.3); /* Transparan */
+        color: rgba(255, 255, 255, 0.9) !important;
+        text-align: center; line-height: 45px; font-size: 22px;
+        text-decoration: none; z-index: 999990;
+        backdrop-filter: blur(2px);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+    }
     .back-to-top:hover {
-        background-color: #00AAFF; /* Jadi Biru Terang */
+        background-color: #00AAFF;
         color: white !important;
         transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0,170,255,0.3);
         opacity: 1;
+    }
+    
+    /* ANIMASI NAIK KALAU ADA KERANJANG */
+    /* Kelas ini akan disuntikkan Python jika keranjang > 0 */
+    .back-to-top.naik {
+        bottom: 100px !important; /* Naik ke atas Floating Bar */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -185,7 +201,7 @@ def buat_voucher_image(nama, nominal, resi_asal):
 if 'keranjang' not in st.session_state: st.session_state.keranjang = []
 def reset_keranjang(): st.session_state.keranjang = []
 
-# --- SIDEBAR (NAVIGASI) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.title("e-PAS Mart")
     menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "🔍 Lacak Pesanan"])
@@ -200,7 +216,6 @@ if menu == "🏠 Beranda":
         <img src="https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg" 
              style="width: 100%; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
         """, unsafe_allow_html=True)
-    
     st.markdown("<h3 style='text-align: center;'>Belanja Aman & Transparan</h3>", unsafe_allow_html=True)
     st.info("💡 e-PAS Mart menerapkan prinsip **100% Cashless (Non-Tunai)**.")
 
@@ -208,14 +223,13 @@ if menu == "🏠 Beranda":
 # 2. PESAN BARANG
 # =========================================
 elif menu == "🛍️ Pesan Barang":
-    # Header
     st.markdown("<h2 style='margin-bottom:10px;'>🛍️ Etalase</h2>", unsafe_allow_html=True)
 
     # Hitung total
     total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
     total_qty = sum(item['qty'] for item in st.session_state.keranjang)
 
-    # --- DEFINISI MODAL KERANJANG ---
+    # --- DIALOG KERANJANG ---
     @st.dialog("🛒 Keranjang Belanja")
     def show_cart_modal():
         if not st.session_state.keranjang:
@@ -239,7 +253,6 @@ elif menu == "🛍️ Pesan Barang":
 
     # === TAB 1: ETALASE ===
     with tab_menu:
-        # 1. Popup Tambah
         @st.dialog("Masukkan Jumlah")
         def popup_add(item):
             c1, c2 = st.columns([1, 2])
@@ -257,12 +270,10 @@ elif menu == "🛍️ Pesan Barang":
                 st.session_state.keranjang = [x for x in st.session_state.keranjang if x['nama'] != item['nama_barang']]
                 if jumlah > 0:
                     st.session_state.keranjang.append({
-                        "id": item['id'], "nama": item['nama_barang'], 
-                        "harga": item['harga'], "qty": jumlah
+                        "id": item['id'], "nama": item['nama_barang'], "harga": item['harga'], "qty": jumlah
                     })
                 st.rerun()
 
-        # 2. Kartu Produk
         @st.fragment
         def kartu_produk(item):
             with st.container(border=True):
@@ -284,7 +295,6 @@ elif menu == "🛍️ Pesan Barang":
                 if st.button(lbl, key=f"btn_{item['id']}", type=typ, use_container_width=True):
                     popup_add(item)
 
-        # 3. Load Data
         res = supabase.table("barang").select("*").gt("stok", 0).order('nama_barang').execute()
         items = res.data
         if items:
@@ -292,8 +302,7 @@ elif menu == "🛍️ Pesan Barang":
             for row in rows:
                 cols = st.columns(2)
                 for i, item in enumerate(row):
-                    with cols[i]:
-                        kartu_produk(item)
+                    with cols[i]: kartu_produk(item)
             st.write("\n"*5)
         else:
             st.info("Barang habis.")
@@ -310,9 +319,8 @@ elif menu == "🛍️ Pesan Barang":
                     st.write(f"• {x['qty']}x {x['nama']} ({format_rupiah(x['harga']*x['qty'])})")
                 st.divider()
                 st.markdown(f"### Total: {format_rupiah(total_duit)}")
-                
                 bayar = st.selectbox("Metode Bayar", ["Transfer Bank", "E-Wallet", "🎫 Voucher / Saldo Refund"])
-                if "Voucher" in bayar: st.info("Upload Voucher di bawah.")
+                if "Voucher" in bayar: st.info("Upload Voucher.")
                 else: st.warning("Transfer sesuai instruksi.")
 
                 with st.form("checkout"):
@@ -356,28 +364,28 @@ elif menu == "🛍️ Pesan Barang":
                                 else: st.error("Gagal upload.")
                             except Exception as e: st.error(f"Error: {e}")
 
-    # --- TOMBOL MELAYANG BAWAH (KERANJANG) ---
-    if total_duit > 0:
-        # Jika keranjang ada isi, kita naikkan posisi tombol Back to Top secara otomatis
-        # dengan menyuntikkan CSS dinamis
-        st.markdown("""
-        <style>
-            .back-to-top { bottom: 100px !important; } 
-        </style>
-        """, unsafe_allow_html=True)
+    # --- LOGIKA TOMBOL MELAYANG (FLOATING BUTTONS) ---
+    
+    # 1. Tentukan Kelas CSS untuk tombol Back to Top
+    # Jika Keranjang > 0, kita pakai class 'naik' agar posisinya lebih tinggi
+    class_tambahan = "naik" if total_duit > 0 else ""
 
+    # 2. Render Tombol Back to Top (HTML)
+    st.markdown(f'<a href="#paling-atas" class="back-to-top {class_tambahan}">⬆️</a>', unsafe_allow_html=True)
+
+    # 3. Render Floating Cart Bar (Python Container dengan CSS Hack)
+    if total_duit > 0:
         with st.container(border=True):
+            # Marker ini yang membuat container ini melayang (cek CSS di atas)
             st.markdown('<span class="floating-bar-marker"></span>', unsafe_allow_html=True)
+            
             c_float_1, c_float_2 = st.columns([1.5, 1], vertical_alignment="center")
             with c_float_1:
-                st.markdown(f"<div style='font-size:14px; font-weight:bold;'>Total: {format_rupiah(total_duit)}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:14px; font-weight:bold; color:#333;'>Total: {format_rupiah(total_duit)}</div>", unsafe_allow_html=True)
                 st.caption(f"{total_qty} Barang")
             with c_float_2:
                 if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                     show_cart_modal()
-
-    # --- TOMBOL KEMBALI KE ATAS (SEMI-TRANSPARAN) ---
-    st.markdown('<a href="#paling-atas" class="back-to-top">⬆️</a>', unsafe_allow_html=True)
 
 # =========================================
 # 3. LACAK PESANAN
