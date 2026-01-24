@@ -20,14 +20,14 @@ st.set_page_config(page_title="e-PAS Mart | Belanja Cepat & Aman", page_icon="�
 # --- TITIK JANGKAR SCROLL KE ATAS ---
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
-# --- CSS CUSTOM FINAL (FIX TAMPILAN HP) ---
+# --- CSS CUSTOM V3 (FIX TOMBOL SEJAJAR DI HP) ---
 st.markdown("""
 <style>
     /* 1. GLOBAL FONT */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
     html, body, [class*="css"]  { font-family: 'Poppins', sans-serif; }
 
-    /* 2. LAYOUT CONTAINER (Biar tidak terlalu mepet) */
+    /* 2. LAYOUT UTAMA */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 5rem !important;
@@ -35,7 +35,7 @@ st.markdown("""
         padding-right: 0.5rem !important;
     }
 
-    /* 3. STYLE TOMBOL KEREN */
+    /* 3. TOMBOL GRADIENT */
     .stButton>button {
         width: 100%;
         border-radius: 8px !important;
@@ -44,62 +44,91 @@ st.markdown("""
         color: white !important;
         border: none !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        padding: 5px 0px !important; /* Padding tipis biar muat di HP */
-        min-height: 35px !important;
+        padding: 0px !important; /* Hilangkan padding tebal */
+        height: 35px !important; /* Paksa tinggi tombol */
+        line-height: 35px !important;
+        margin-top: 0px !important;
     }
     .stButton>button:active { transform: scale(0.95); }
 
-    /* Tombol Minus Warna Abu */
+    /* Tombol Minus (Abu-abu) */
     div[data-testid="column"] button:contains("−") {
         background: #eef2f5 !important;
         color: #333 !important;
     }
 
-    /* 4. STYLE GAMBAR PRODUK (FIX UKURAN) */
+    /* 4. GAMBAR PRODUK */
     div[data-testid="stImage"] img {
         width: 100% !important;
-        object-fit: contain !important; /* Gambar utuh tidak terpotong */
+        object-fit: contain !important;
         border-radius: 8px 8px 0 0 !important;
-        transition: height 0.3s ease;
     }
 
-    /* === KHUSUS TAMPILAN LAPTOP === */
+    /* === TAMPILAN LAPTOP === */
     @media (min-width: 641px) {
         div[data-testid="stImage"] img { height: 160px !important; }
     }
 
-    /* === KHUSUS TAMPILAN HP (FIX UTAMA) === */
+    /* === TAMPILAN HP (FIX AGRESIF) === */
     @media (max-width: 640px) {
-        /* A. Kecilkan Gambar di HP */
-        div[data-testid="stImage"] img {
-            height: 100px !important; /* Tinggi gambar dibatasi 100px */
-        }
+        /* A. Gambar Kecil */
+        div[data-testid="stImage"] img { height: 100px !important; }
         
-        /* B. Font Judul Lebih Kecil */
+        /* B. Judul & Teks */
         .nama-produk { font-size: 13px !important; height: 35px !important; }
         
-        /* C. PAKSA KOLOM TOMBOL JADI SEJAJAR (HORIZONTAL) */
-        /* Ini akan mencari kolom di dalam kartu produk dan memaksanya sejajar */
+        /* C. JURUS PAKSA SEJAJAR (ROW) */
+        
+        /* 1. Target Kontainer Kolom di dalam Kartu */
         div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] {
-            flex-direction: row !important; /* Jangan stacking ke bawah */
+            flex-direction: row !important; /* Wajib baris ke samping */
+            flex-wrap: nowrap !important; /* Dilarang turun ke bawah */
+            gap: 5px !important;
             align-items: center !important;
-            gap: 5px !important; /* Jarak antar tombol diperkecil */
+        }
+
+        /* 2. Target Kolom Anakannya (Si Minus, Angka, Plus) */
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] [data-testid="column"] {
+            width: 33% !important; /* Lebar dibagi 3 rata */
+            flex: 1 1 auto !important; 
+            min-width: 10px !important; /* Izinkan mengecil */
         }
         
-        /* Atur lebar kolom tombol (3 kolom: -, angka, +) */
-        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="column"] {
-            width: 33% !important;
-            min-width: 30px !important;
-            flex: 1 !important;
+        /* 3. Rapikan Angka di Tengah */
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] [data-testid="column"] > div {
+             display: flex !important;
+             justify-content: center !important;
+             align-items: center !important;
+             height: 100% !important;
+        }
+
+        /* 4. Padding Tombol HP (Biar muat) */
+        .stButton>button {
+            font-size: 14px !important;
+            height: 32px !important; 
+            min-height: 32px !important;
         }
         
-        /* Hilangkan margin aneh bawaan Streamlit di HP */
+        /* 5. Kurangi Margin Kartu */
         div[data-testid="stVerticalBlockBorderWrapper"] {
             padding: 8px !important;
+            gap: 5px !important;
+        }
+        /* Hilangkan gap vertikal bawaan elemen */
+        div[data-testid="element-container"] {
+            margin-bottom: 5px !important;
         }
     }
 
-    /* 5. STYLE JUDUL & KARTU */
+    /* 5. STYLE CARD */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        border: 1px solid #f0f0f0;
+    }
+
+    /* 6. TEKS JUDUL */
     .nama-produk { 
         font-weight: 600; color: #2c3e50;
         overflow: hidden; display: -webkit-box; 
@@ -108,18 +137,11 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid #f0f0f0;
-    }
-    
-    /* 6. FLOATING CART (KERANJANG MELAYANG) */
+    /* 7. FLOATING TOTAL */
     .floating-total {
         position: fixed; bottom: 15px; left: 2.5%; width: 95%;
         background: rgba(255, 255, 255, 0.98);
-        padding: 12px; border-radius: 12px;
+        padding: 10px; border-radius: 12px;
         border: 1px solid #00AAFF;
         box-shadow: 0px 4px 15px rgba(0,170,255,0.2);
         z-index: 99999; text-align: center;
@@ -624,6 +646,7 @@ elif menu == "🔍 Lacak Pesanan":
                         st.error(f"Gagal membatalkan. Error: {e}")
         else:
             st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
