@@ -75,7 +75,7 @@ st.markdown("""
     .harga-produk { color: #00AAFF; font-weight: 700; font-size: 14px; }
     .stok-produk { font-size: 10px; color: #888; margin-bottom: 8px; }
 
-    /* 4. FLOATING BOTTOM BAR (KERANJANG MELAYANG) */
+    /* 4. FLOATING BOTTOM BAR */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) {
         position: fixed; bottom: 15px; left: 2.5%; width: 95%; z-index: 999999;
         background: white; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
@@ -177,7 +177,6 @@ def buat_voucher_image(nama, nominal, resi_asal):
 
 # --- SESSION STATE ---
 if 'keranjang' not in st.session_state: st.session_state.keranjang = []
-# State khusus untuk menyimpan nota setelah sukses order
 if 'nota_sukses' not in st.session_state: st.session_state.nota_sukses = None
 
 def reset_keranjang(): st.session_state.keranjang = []
@@ -288,23 +287,25 @@ elif menu == "🛍️ Pesan Barang":
         else:
             st.info("Barang habis.")
 
-    # === TAB 2: PEMBAYARAN (FIX DOWNLOAD) ===
+    # === TAB 2: PEMBAYARAN ===
     with tab_checkout:
         st.header("📝 Konfirmasi")
         
-        # --- MODE SUKSES (TAMPILKAN NOTA DI LUAR FORM) ---
+        # LOGIKA TAMPILAN: JIKA SUKSES -> NOTA | JIKA BELUM -> FORM
         if st.session_state.nota_sukses:
+            # --- TAMPILAN SUKSES ---
             res_data = st.session_state.nota_sukses
             st.success("✅ Pesanan Berhasil Dikirim!")
-            st.markdown(f"**No. Resi:** `{res_data['resi']}`")
             
-            # Tampilkan Gambar
+            # FITUR SALIN KODE RESI (st.code punya tombol copy otomatis)
+            st.write("**Salin Kode Resi:**")
+            st.code(res_data['resi'], language=None)
+            
             b64 = image_to_base64(res_data['data'])
             st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:250px; border:1px solid #ddd; margin-bottom:10px;">', unsafe_allow_html=True)
             
             c_dl, c_new = st.columns(2)
             with c_dl:
-                # Tombol Download AMAN disini karena tidak di dalam st.form
                 st.download_button(
                     label="📥 Download Nota",
                     data=res_data['data'],
@@ -318,9 +319,9 @@ elif menu == "🛍️ Pesan Barang":
                     st.session_state.nota_sukses = None
                     st.rerun()
             st.info("Simpan resi ini untuk melacak status pesanan.")
-
-        # --- MODE INPUT FORM (JIKA BELUM ADA NOTA) ---
+            
         else:
+            # --- TAMPILAN FORM ---
             if not st.session_state.keranjang:
                 st.info("Keranjang kosong.")
             else:
@@ -334,14 +335,12 @@ elif menu == "🛍️ Pesan Barang":
                     if "Voucher" in bayar: st.info("Upload Voucher.")
                     else: st.warning("Transfer sesuai instruksi.")
 
-                    # FORM MULAI DI SINI
                     with st.form("checkout"):
                         pemesan = st.text_input("Nama Pengirim")
                         untuk = st.text_input("Nama WBP + Bin/Binti", placeholder="Contoh: Ali bin Abu")
                         wa = st.text_input("WhatsApp")
                         bukti = st.file_uploader("Upload Bukti", type=['jpg','png'], key="bukti_fix")
                         
-                        # TOMBOL SUBMIT (Hanya Proses Data, Tidak Ada Download Disini)
                         if st.form_submit_button("✅ Kirim Pesanan", type="primary"):
                             if not (pemesan and untuk and wa and bukti):
                                 st.error("Data tidak lengkap!")
@@ -355,6 +354,8 @@ elif menu == "🛍️ Pesan Barang":
                                     if url:
                                         items_str = ", ".join([f"{x['qty']}x {x['nama']}" for x in st.session_state.keranjang])
                                         resi = generate_resi()
+                                        
+                                        # SUPABASE akan otomatis mengisi created_at
                                         data = {
                                             "nama_pemesan": pemesan, "untuk_siapa": untuk, "nomor_wa": wa,
                                             "item_pesanan": items_str, "total_harga": total_duit,
@@ -362,6 +363,7 @@ elif menu == "🛍️ Pesan Barang":
                                             "cara_bayar": bayar, "no_resi": resi
                                         }
                                         supabase.table("pesanan").insert(data).execute()
+                                        
                                         for x in st.session_state.keranjang:
                                             curr = supabase.table("barang").select("stok").eq("nama_barang", x['nama']).execute()
                                             if curr.data:
@@ -369,14 +371,10 @@ elif menu == "🛍️ Pesan Barang":
 
                                         nota = buat_struk_image(data, st.session_state.keranjang, total_duit, resi)
                                         
-                                        # SIMPAN HASIL KE STATE & RERUN (Keluar dari Form)
-                                        st.session_state.nota_sukses = {
-                                            'data': nota,
-                                            'resi': resi
-                                        }
+                                        # SIMPAN STATE DAN RERUN AGAR KELUAR DARI FORM
+                                        st.session_state.nota_sukses = { 'data': nota, 'resi': resi }
                                         reset_keranjang()
-                                        st.rerun() 
-                                        
+                                        st.rerun()
                                     else: st.error("Gagal upload.")
                                 except Exception as e: st.error(f"Error: {e}")
 
@@ -396,7 +394,7 @@ elif menu == "🛍️ Pesan Barang":
                     show_cart_modal()
 
 # =========================================
-# 3. LACAK PESANAN (LOGIKA TIMER 4 JAM)
+# 3. LACAK PESANAN
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
@@ -416,40 +414,50 @@ elif menu == "🔍 Lacak Pesanan":
                 st.warning("⚠️ Opsi Pembatalan")
                 
                 try:
-                    waktu_pesan_str = d['created_at'].replace('Z', '+00:00')
-                    waktu_pesan = datetime.fromisoformat(waktu_pesan_str)
-                    waktu_sekarang = datetime.now(timezone.utc)
-                    selisih = waktu_sekarang - waktu_pesan
-                    batas_waktu = timedelta(hours=4)
+                    # FIX: Ambil created_at dengan aman (gunakan .get)
+                    waktu_str = d.get('created_at')
                     
-                    if selisih >= batas_waktu:
-                        st.error("Admin belum merespon dalam 4 jam. Anda berhak membatalkan pesanan.")
-                        if st.button("❌ Batalkan & Refund Sekarang"):
-                            try:
-                                refund = 0
-                                for i_str in d['item_pesanan'].split(", "):
-                                    q, n = i_str.split("x ", 1)
-                                    q = int(q)
-                                    cur = supabase.table("barang").select("*").eq("nama_barang", n).execute()
-                                    if cur.data:
-                                        supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
-                                        refund += cur.data[0]['harga']*q
-                                
-                                supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
-                                vcr = buat_voucher_image(d['nama_pemesan'], refund, d['no_resi'])
-                                b64_v = image_to_base64(vcr)
-                                st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
-                                st.download_button("Download Voucher", vcr, f"V_{d['no_resi']}.jpg", "image/jpeg")
-                                del st.session_state.resi_aktif
-                                st.stop()
-                            except Exception as e: st.error(f"Gagal: {e}")
+                    if not waktu_str:
+                        st.info("🕒 Menunggu verifikasi admin.")
+                        # Jika kolom tidak ada, kita tidak bisa hitung timer, jadi hide tombol batal
+                        # atau biarkan tombol muncul tanpa timer (tergantung kebijakan).
+                        # Disini saya pilih: Tampilkan info saja.
                     else:
-                        sisa = batas_waktu - selisih
-                        jam, sisa_detik = divmod(sisa.seconds, 3600)
-                        menit, _ = divmod(sisa_detik, 60)
-                        st.info(f"⏳ Tombol batal muncul jika status tetap dalam 4 jam.")
-                        st.caption(f"Sisa waktu: **{jam} Jam {menit} Menit**.")
+                        waktu_pesan_str = waktu_str.replace('Z', '+00:00')
+                        waktu_pesan = datetime.fromisoformat(waktu_pesan_str)
+                        waktu_sekarang = datetime.now(timezone.utc)
+                        selisih = waktu_sekarang - waktu_pesan
+                        batas_waktu = timedelta(hours=4)
+                        
+                        if selisih >= batas_waktu:
+                            st.error("Admin lambat. Anda berhak membatalkan pesanan.")
+                            if st.button("❌ Batalkan & Refund Sekarang"):
+                                try:
+                                    refund = 0
+                                    for i_str in d['item_pesanan'].split(", "):
+                                        q, n = i_str.split("x ", 1)
+                                        q = int(q)
+                                        cur = supabase.table("barang").select("*").eq("nama_barang", n).execute()
+                                        if cur.data:
+                                            supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
+                                            refund += cur.data[0]['harga']*q
+                                    
+                                    supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
+                                    vcr = buat_voucher_image(d['nama_pemesan'], refund, d['no_resi'])
+                                    b64_v = image_to_base64(vcr)
+                                    st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
+                                    st.download_button("Download Voucher", vcr, f"V_{d['no_resi']}.jpg", "image/jpeg")
+                                    del st.session_state.resi_aktif
+                                    st.stop()
+                                except Exception as e: st.error(f"Gagal: {e}")
+                        else:
+                            sisa = batas_waktu - selisih
+                            jam, sisa_detik = divmod(sisa.seconds, 3600)
+                            menit, _ = divmod(sisa_detik, 60)
+                            st.info(f"⏳ Tombol batal muncul jika status tetap dalam 4 jam.")
+                            st.caption(f"Sisa waktu: **{jam} Jam {menit} Menit**.")
+                            
                 except Exception as e:
-                    st.write(f"Error tanggal: {e}")
+                    st.write(f"Error parsing tanggal: {e}")
         else:
             st.error("Tidak ditemukan.")
