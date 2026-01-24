@@ -20,25 +20,111 @@ st.set_page_config(page_title="e-PAS Mart | Belanja Cepat & Aman", page_icon="�
 # --- TITIK JANGKAR SCROLL KE ATAS ---
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
-# --- CSS CUSTOM ---
+# --- CSS CUSTOM SUPER ---
 st.markdown("""
 <style>
-    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; }
-    div[data-testid="stVerticalBlock"] > div { background-color: #f9f9f9; border-radius: 10px; padding: 10px; }
-    .harga-tag { color: #d9534f; font-size: 16px; font-weight: bold; }
-    
-    /* Sticky Checkout */
-    div[data-testid="column"]:nth-of-type(2) {
-        position: sticky; top: 80px; align-self: start;
-        background-color: #ffffff; padding: 20px; border-radius: 15px;
-        border: 1px solid #e0e0e0; box-shadow: 0px 4px 10px rgba(0,0,0,0.05); z-index: 100;
+    /* 1. IMPORT FONT KEREN (Google Fonts: Poppins) */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    html, body, [class*="css"]  {
+        font-family: 'Poppins', sans-serif;
+    }
+
+    /* 2. HILANGKAN PADDING BERLEBIH DI HP (BIAR FULL SCREEN) */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    /* 3. PERCANTIK TOMBOL (GRADIENT & ROUNDED) */
+    .stButton>button {
+        width: 100%;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        background: linear-gradient(90deg, #00AAFF 0%, #0077CC 100%);
+        color: white !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    /* Tombol Secondary (Minus/Hapus) biar beda warna */
+    div[data-testid="column"] button:contains("−") {
+        background: #f0f2f6 !important;
+        color: #333 !important;
+    }
+
+    /* 4. PERCANTIK INPUT FIELD (KOTAK ISIAN) */
+    .stTextInput>div>div>input {
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
+        padding: 10px;
+    }
+    .stTextInput>div>div>input:focus {
+        border-color: #00AAFF;
+        box-shadow: 0 0 0 2px rgba(0,170,255,0.2);
+    }
+
+    /* 5. KARTU PRODUK (CARD STYLE) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Bayangan Halus */
+        padding: 10px !important;
+        margin-bottom: 15px;
+        border: 1px solid #f0f0f0;
+        transition: transform 0.2s;
     }
     
-    .qty-display {
-        text-align: center; font-size: 20px; font-weight: bold; margin-top: 5px;
+    /* 6. GAMBAR PRODUK */
+    div[data-testid="stImage"] img {
+        height: 160px !important; 
+        object-fit: cover !important; 
+        border-radius: 12px !important;
+    }
+
+    /* 7. TEXT STYLE */
+    .nama-produk { 
+        font-size: 15px; 
+        font-weight: 600; 
+        color: #2c3e50;
+        line-height: 1.3; 
+        height: 40px; 
+        overflow: hidden; 
+        display: -webkit-box; 
+        -webkit-line-clamp: 2; 
+        -webkit-box-orient: vertical; 
+        margin-top: 8px;
+        margin-bottom: 4px; 
+    }
+    .stSuccess, .stInfo, .stWarning {
+        border-radius: 10px !important;
     }
     
-    @media (max-width: 640px) { div[data-testid="column"]:nth-of-type(2) { position: static; top: auto; } }
+    /* 8. FLOATING CHECKOUT (KERANJANG MELAYANG) */
+    .floating-total {
+        position: fixed; bottom: 20px; left: 5%; width: 90%;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px); /* Efek Kaca Buram */
+        padding: 15px;
+        border-radius: 20px;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0px 10px 30px rgba(0,0,0,0.15);
+        z-index: 99999; 
+        text-align: center; font-size: 16px; font-weight: bold; color: #333;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* TRACKING BAR */
+    .stProgress > div > div > div > div {
+        background-color: #00AAFF;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -529,3 +615,4 @@ elif menu == "🔍 Lacak Pesanan":
                         st.error(f"Gagal membatalkan. Error: {e}")
         else:
             st.error("Nomor Resi tidak ditemukan.")
+
