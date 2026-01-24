@@ -296,13 +296,53 @@ if menu == "🏠 Beranda":
     st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
-# 2. PESAN BARANG
+# 2. PESAN BARANG (UPDATE: HEADER KERANJANG)
 # =========================================
 elif menu == "🛍️ Pesan Barang":
-    # Hitung total: Harga * Qty
+    # Hitung total duit & qty untuk display
     total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
+    total_qty = sum(item['qty'] for item in st.session_state.keranjang)
     
-    # --- CSS BUTTON BACK TO TOP ---
+    # --- LAYOUT HEADER: JUDUL (KIRI) & KERANJANG (KANAN) ---
+    c_header, c_cart = st.columns([3, 1.5], gap="small", vertical_alignment="center")
+    
+    with c_header:
+        # Judul Halaman
+        st.markdown("<h2 style='margin:0; padding:0;'>🛍️ Belanja</h2>", unsafe_allow_html=True)
+    
+    with c_cart:
+        # --- FITUR KERANJANG POPOVER (MENU GANTUNG) ---
+        label_cart = f"🛒 {total_qty} Item" if total_qty > 0 else "🛒 Kosong"
+        
+        # st.popover adalah tombol yang membuka menu kecil saat diklik
+        with st.popover(label_cart, use_container_width=True):
+            st.markdown("### 🛒 Isi Keranjang")
+            
+            if not st.session_state.keranjang:
+                st.info("Belum ada barang.")
+            else:
+                # Tampilkan list barang
+                for i, item in enumerate(st.session_state.keranjang):
+                    with st.container(border=True):
+                        c_nama, c_harga = st.columns([2, 1])
+                        c_nama.markdown(f"**{item['qty']}x {item['nama']}**")
+                        c_harga.markdown(f"{format_rupiah(item['harga'] * item['qty'])}")
+                        
+                        # Tombol Hapus per Item
+                        if st.button("🗑️ Hapus", key=f"del_cart_{i}"):
+                            del st.session_state.keranjang[i]
+                            st.rerun()
+                
+                st.divider()
+                st.markdown(f"**Total: {format_rupiah(total_duit)}**")
+                
+                # Tombol Lanjut ke Pembayaran
+                if st.button("💳 Bayar Sekarang", type="primary", use_container_width=True):
+                    # Trik pindah tab: Kita tidak bisa pindah tab via coding langsung, 
+                    # tapi kita bisa kasih instruksi visual
+                    st.toast("Silakan klik Tab 'Pembayaran' di bawah", icon="👇")
+
+    # --- CSS BACK TO TOP & FLOATING BAR (KODE LAMA TETAP DIPAKAI) ---
     st.markdown("""
         <style>
             .back-to-top {
@@ -314,11 +354,19 @@ elif menu == "🛍️ Pesan Barang":
                 text-decoration: none; display: block; border: 2px solid white;
             }
             .back-to-top:hover { background-color: #0088cc; transform: scale(1.1); }
+            
+            /* Perbaiki Tampilan Tombol Keranjang di Header */
+            div[data-testid="stPopover"] > button {
+                background-color: #e3f2fd;
+                color: #00AAFF;
+                border: 1px solid #00AAFF;
+                font-weight: bold;
+            }
         </style>
         <a href="#paling-atas" class="back-to-top" target="_self">⬆️</a>
     """, unsafe_allow_html=True)
-
-    # --- CSS FLOATING BAR ---
+    
+    # --- FLOATING BAR BAWAH (Jika ada isi) ---
     if total_duit > 0:
         st.markdown(f"""
         <style>
@@ -326,14 +374,18 @@ elif menu == "🛍️ Pesan Barang":
                 position: fixed; bottom: 0; left: 0; width: 100%;
                 background-color: #ffffff; padding: 15px;
                 border-top: 3px solid #00AAFF; box-shadow: 0px -4px 10px rgba(0,0,0,0.1);
-                z-index: 99999; text-align: center; font-size: 18px; font-weight: bold; color: #333;
+                z-index: 99999; text-align: center; font-size: 16px; font-weight: bold; color: #333;
             }}
         </style>
         <div class="floating-total">
-            🛒 Total: {format_rupiah(total_duit)} <br>
-            <span style="font-size:12px; font-weight:normal; color: #555;">(Klik Tab '💳 Pembayaran' di atas untuk lanjut)</span>
+            Total: {format_rupiah(total_duit)}
+            <span style="font-size:12px; font-weight:normal; color: #555;">({total_qty} Barang)</span>
         </div>
         """, unsafe_allow_html=True)
+
+    # ... (LANJUTKAN KE KODE st.tabs DI BAWAHNYA SEPERTI BIASA) ...
+    tab_menu, tab_checkout = st.tabs(["🍔 Pilih Menu", "💳 Pembayaran"])
+    # ...
 
     tab_menu, tab_checkout = st.tabs(["🍔 Pilih Menu", "💳 Pembayaran"])
 
@@ -625,5 +677,6 @@ elif menu == "🔍 Lacak Pesanan":
                         st.error(f"Gagal membatalkan. Error: {e}")
         else:
             st.error("Nomor Resi tidak ditemukan.")
+
 
 
