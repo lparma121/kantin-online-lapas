@@ -285,63 +285,113 @@ elif menu == "🛍️ Pesan Barang":
         else:
             st.info("Barang habis.")
 
-    # === TAB 2: PEMBAYARAN ===
+    # === TAB 2: PEMBAYARAN (FIX DOWNLOAD BUTTON) ===
     with tab_checkout:
         st.header("📝 Konfirmasi")
-        if not st.session_state.keranjang:
-            st.info("Keranjang kosong.")
+        
+        # Inisialisasi state untuk nota jika belum ada
+        if 'nota_sukses' not in st.session_state:
+            st.session_state.nota_sukses = None
+
+        # Jika ada nota sukses di session state, tampilkan hasil & tombol download (DI LUAR FORM)
+        if st.session_state.nota_sukses:
+            res_data = st.session_state.nota_sukses
+            
+            st.success("✅ Pesanan Berhasil Dikirim!")
+            st.markdown(f"**No. Resi:** `{res_data['resi']}`")
+            
+            # Tampilkan Preview Nota
+            b64 = image_to_base64(res_data['data'])
+            st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:250px; border:1px solid #ddd; margin-bottom:10px;">', unsafe_allow_html=True)
+            
+            col_dl, col_new = st.columns(2)
+            with col_dl:
+                st.download_button(
+                    label="📥 Download Nota",
+                    data=res_data['data'],
+                    file_name=f"{res_data['resi']}.jpg",
+                    mime="image/jpeg",
+                    type="primary",
+                    use_container_width=True
+                )
+            with col_new:
+                if st.button("🔄 Pesan Lagi", use_container_width=True):
+                    del st.session_state.nota_sukses # Hapus data nota lama
+                    st.rerun()
+            
+            st.info("Simpan resi di atas untuk melacak pesanan Anda.")
+
+        # Jika belum ada nota sukses (Mode Input), tampilkan Form
         else:
-            with st.container(border=True):
-                st.write("**Item:**")
-                for x in st.session_state.keranjang:
-                    st.write(f"• {x['qty']}x {x['nama']} ({format_rupiah(x['harga']*x['qty'])})")
-                st.divider()
-                st.markdown(f"### Total: {format_rupiah(total_duit)}")
-                bayar = st.selectbox("Metode Bayar", ["Transfer Bank", "E-Wallet", "🎫 Voucher / Saldo Refund"])
-                if "Voucher" in bayar: st.info("Upload Voucher.")
-                else: st.warning("Transfer sesuai instruksi.")
-
-                with st.form("checkout"):
-                    pemesan = st.text_input("Nama Pengirim")
-                    untuk = st.text_input("Nama WBP + Bin/Binti", placeholder="Contoh: Ali bin Abu")
-                    wa = st.text_input("WhatsApp")
-                    bukti = st.file_uploader("Upload Bukti", type=['jpg','png'], key="bukti_fix")
+            if not st.session_state.keranjang:
+                st.info("Keranjang kosong. Silakan belanja dulu.")
+            else:
+                with st.container(border=True):
+                    st.write("**Item:**")
+                    for x in st.session_state.keranjang:
+                        st.write(f"• {x['qty']}x {x['nama']} ({format_rupiah(x['harga']*x['qty'])})")
+                    st.divider()
+                    st.markdown(f"### Total: {format_rupiah(total_duit)}")
                     
-                    if st.form_submit_button("✅ Kirim Pesanan", type="primary"):
-                        if not (pemesan and untuk and wa and bukti):
-                            st.error("Data tidak lengkap!")
-                        elif "bin" not in untuk.lower() and "binti" not in untuk.lower():
-                            st.error("Wajib pakai Bin/Binti!")
-                        else:
-                            try:
-                                f_bytes = bukti.getvalue()
-                                fname = f"tf_{int(time.time())}.jpg"
-                                url = upload_file_bytes(f_bytes, "bukti_transfer", fname)
-                                if url:
-                                    items_str = ", ".join([f"{x['qty']}x {x['nama']}" for x in st.session_state.keranjang])
-                                    resi = generate_resi()
-                                    # SUPABASE akan otomatis mengisi created_at
-                                    data = {
-                                        "nama_pemesan": pemesan, "untuk_siapa": untuk, "nomor_wa": wa,
-                                        "item_pesanan": items_str, "total_harga": total_duit,
-                                        "bukti_transfer": url, "status": "Menunggu Verifikasi",
-                                        "cara_bayar": bayar, "no_resi": resi
-                                    }
-                                    supabase.table("pesanan").insert(data).execute()
-                                    for x in st.session_state.keranjang:
-                                        curr = supabase.table("barang").select("stok").eq("nama_barang", x['nama']).execute()
-                                        if curr.data:
-                                            supabase.table("barang").update({"stok": curr.data[0]['stok'] - x['qty']}).eq("nama_barang", x['nama']).execute()
+                    bayar = st.selectbox("Metode Bayar", ["Transfer Bank", "E-Wallet", "🎫 Voucher / Saldo Refund"])
+                    if "Voucher" in bayar: st.info("Upload Voucher.")
+                    else: st.warning("Transfer sesuai instruksi.")
 
-                                    nota = buat_struk_image(data, st.session_state.keranjang, total_duit, resi)
-                                    reset_keranjang()
-                                    st.success("Terkirim!")
-                                    st.code(resi)
-                                    b64 = image_to_base64(nota)
-                                    st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:250px; border:1px solid #ddd;">', unsafe_allow_html=True)
-                                    st.download_button("Download Nota", nota, f"{resi}.jpg", "image/jpeg")
-                                else: st.error("Gagal upload.")
-                            except Exception as e: st.error(f"Error: {e}")
+                    # --- FORM INPUT ---
+                    with st.form("checkout"):
+                        pemesan = st.text_input("Nama Pengirim")
+                        untuk = st.text_input("Nama WBP + Bin/Binti", placeholder="Contoh: Ali bin Abu")
+                        wa = st.text_input("WhatsApp")
+                        bukti = st.file_uploader("Upload Bukti", type=['jpg','png'], key="bukti_fix")
+                        
+                        # Tombol Submit Form
+                        submit = st.form_submit_button("✅ Kirim Pesanan", type="primary")
+
+                        if submit:
+                            if not (pemesan and untuk and wa and bukti):
+                                st.error("Data tidak lengkap!")
+                            elif "bin" not in untuk.lower() and "binti" not in untuk.lower():
+                                st.error("Wajib pakai Bin/Binti!")
+                            else:
+                                try:
+                                    f_bytes = bukti.getvalue()
+                                    fname = f"tf_{int(time.time())}.jpg"
+                                    url = upload_file_bytes(f_bytes, "bukti_transfer", fname)
+                                    if url:
+                                        items_str = ", ".join([f"{x['qty']}x {x['nama']}" for x in st.session_state.keranjang])
+                                        resi = generate_resi()
+                                        
+                                        data = {
+                                            "nama_pemesan": pemesan, "untuk_siapa": untuk, "nomor_wa": wa,
+                                            "item_pesanan": items_str, "total_harga": total_duit,
+                                            "bukti_transfer": url, "status": "Menunggu Verifikasi",
+                                            "cara_bayar": bayar, "no_resi": resi
+                                        }
+                                        supabase.table("pesanan").insert(data).execute()
+                                        
+                                        # Kurangi Stok
+                                        for x in st.session_state.keranjang:
+                                            curr = supabase.table("barang").select("stok").eq("nama_barang", x['nama']).execute()
+                                            if curr.data:
+                                                supabase.table("barang").update({"stok": curr.data[0]['stok'] - x['qty']}).eq("nama_barang", x['nama']).execute()
+
+                                        # Generate Nota
+                                        nota = buat_struk_image(data, st.session_state.keranjang, total_duit, resi)
+                                        
+                                        # SIMPAN KE SESSION STATE (PENTING!)
+                                        st.session_state.nota_sukses = {
+                                            'data': nota,
+                                            'resi': resi
+                                        }
+                                        
+                                        # Kosongkan keranjang
+                                        reset_keranjang()
+                                        
+                                        # Rerun agar Form hilang dan Nota muncul (karena Logic If-Else di atas)
+                                        st.rerun()
+                                        
+                                    else: st.error("Gagal upload.")
+                                except Exception as e: st.error(f"Error: {e}")
 
     # --- TOMBOL MELAYANG ---
     class_tambahan = "naik" if total_duit > 0 else ""
@@ -431,3 +481,4 @@ elif menu == "🔍 Lacak Pesanan":
 
         else:
             st.error("Tidak ditemukan.")
+
