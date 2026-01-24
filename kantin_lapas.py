@@ -7,6 +7,7 @@ import random
 import string
 import base64
 from datetime import datetime, timedelta, timezone
+import streamlit.components.v1 as components  # PENTING: Import ini untuk fitur auto-copy
 
 # --- KONEKSI DATABASE ---
 try:
@@ -88,7 +89,7 @@ st.markdown("""
         background-color: #00AAFF !important; border: none !important;
     }
 
-    /* 5. BACK TO TOP (GHOST MODE) */
+    /* 5. BACK TO TOP */
     .back-to-top {
         position: fixed; bottom: 30px; right: 20px;
         width: 45px; height: 45px; border-radius: 50%;
@@ -125,6 +126,37 @@ def upload_file_bytes(file_bytes, folder, nama_file):
         supabase.storage.from_("KANTIN-ASSETS").upload(path, file_bytes, {"upsert": "true", "content-type": "image/jpeg"})
         return supabase.storage.from_("KANTIN-ASSETS").get_public_url(path)
     except Exception: return None
+
+# --- JURUS JAVA SCRIPT: KLIK UNTUK COPY RESI ---
+def tampilkan_resi_copy_otomatis(resi_text):
+    # Ini adalah HTML + JS yang disuntikkan ke Streamlit
+    html_code = f"""
+    <div onclick="copyText()" style="
+        cursor: pointer;
+        background-color: #f0f8ff;
+        border: 2px dashed #00AAFF;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        transition: 0.3s;
+        margin-bottom: 10px;
+    " onmouseover="this.style.backgroundColor='#e3f2fd'" onmouseout="this.style.backgroundColor='#f0f8ff'">
+        <div style="font-size: 12px; color: #555; margin-bottom: 5px;">KLIK KOTAK UNTUK SALIN RESI</div>
+        <div style="font-size: 24px; font-weight: bold; color: #00AAFF; letter-spacing: 1px;">{resi_text}</div>
+        <div id="pesan_copy" style="font-size: 11px; color: green; height: 15px; margin-top:5px;"></div>
+    </div>
+
+    <script>
+    function copyText() {{
+        navigator.clipboard.writeText("{resi_text}");
+        document.getElementById("pesan_copy").innerHTML = "✅ BERHASIL DISALIN!";
+        setTimeout(function() {{
+            document.getElementById("pesan_copy").innerHTML = "";
+        }}, 2000);
+    }}
+    </script>
+    """
+    components.html(html_code, height=100)
 
 # --- GENERATOR GAMBAR ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
@@ -297,9 +329,9 @@ elif menu == "🛍️ Pesan Barang":
             res_data = st.session_state.nota_sukses
             st.success("✅ Pesanan Berhasil Dikirim!")
             
-            # FITUR SALIN KODE RESI (st.code punya tombol copy otomatis)
-            st.write("**Salin Kode Resi:**")
-            st.code(res_data['resi'], language=None)
+            # --- FITUR KHUSUS: KOTAK COPY OTOMATIS (JS) ---
+            tampilkan_resi_copy_otomatis(res_data['resi'])
+            # ----------------------------------------------
             
             b64 = image_to_base64(res_data['data'])
             st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:250px; border:1px solid #ddd; margin-bottom:10px;">', unsafe_allow_html=True)
@@ -419,9 +451,6 @@ elif menu == "🔍 Lacak Pesanan":
                     
                     if not waktu_str:
                         st.info("🕒 Menunggu verifikasi admin.")
-                        # Jika kolom tidak ada, kita tidak bisa hitung timer, jadi hide tombol batal
-                        # atau biarkan tombol muncul tanpa timer (tergantung kebijakan).
-                        # Disini saya pilih: Tampilkan info saja.
                     else:
                         waktu_pesan_str = waktu_str.replace('Z', '+00:00')
                         waktu_pesan = datetime.fromisoformat(waktu_pesan_str)
