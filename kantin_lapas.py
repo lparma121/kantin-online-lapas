@@ -362,37 +362,46 @@ elif menu == "🛍️ Pesan Barang":
 
         st.header("🛍️ Etalase")
         
-        # --- FRAGMENT KARTU PRODUK ---
+        # --- FRAGMENT KARTU PRODUK (TAMPILAN BARU LEBIH CANTIK) ---
         @st.fragment
         def kartu_produk_live(item):
-            with st.container(border=True):
+            with st.container(border=True): # Container ini akan kena CSS shadow & rounded
+                # 1. Gambar Produk
                 img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
                 st.image(img, use_container_width=True)
                 
+                # 2. Judul, Harga, & Stok (HTML Custom agar rapi)
                 st.markdown(f"""
                 <div class="nama-produk">{item['nama_barang']}</div>
-                <div style="color:#d9534f; font-weight:bold; font-size:13px;">{format_rupiah(item['harga'])}</div>
-                <div style="font-size:11px; color:grey;">Stok: {item['stok']}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="color:#00AAFF; font-weight:700; font-size:16px;">{format_rupiah(item['harga'])}</div>
+                    <div style="font-size:11px; color:#555; background:#f0f2f6; padding: 4px 8px; border-radius:6px; border: 1px solid #e0e0e0;">
+                        Stok: {item['stok']}
+                    </div>
+                </div>
                 """, unsafe_allow_html=True)
                 
+                # 3. Logika Tombol (+ -)
                 qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
                 
                 c_min, c_val, c_plus = st.columns([1, 1, 1])
                 with c_min:
+                    # Tombol Minus (Warna abu-abu dr CSS)
                     if st.button("−", key=f"min_{item['id']}"): 
                         if qty_di_keranjang > 0:
                             kurangi_dari_keranjang(item['nama_barang'])
                             st.rerun()
                 with c_val:
-                    st.markdown(f"<div style='text-align:center; font-weight:bold; padding-top:5px;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
+                    # Angka Qty di tengah
+                    st.markdown(f"<div style='text-align:center; font-weight:bold; font-size:18px; padding-top:2px;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
                 with c_plus:
+                    # Tombol Plus (Warna Biru dr CSS)
                     if st.button("➕", key=f"plus_{item['id']}"):
                         if qty_di_keranjang < item['stok']:
                             tambah_ke_keranjang(item['nama_barang'], item['harga'])
                             st.rerun()
                         else:
                             st.toast("Stok Habis!", icon="⚠️")
-
         # LOAD BARANG
         res_b = supabase.table("barang").select("*").gt("stok", 0).order('nama_barang').execute()
         items = res_b.data
@@ -615,4 +624,5 @@ elif menu == "🔍 Lacak Pesanan":
                         st.error(f"Gagal membatalkan. Error: {e}")
         else:
             st.error("Nomor Resi tidak ditemukan.")
+
 
