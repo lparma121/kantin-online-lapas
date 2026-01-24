@@ -20,14 +20,13 @@ st.set_page_config(page_title="e-PAS Mart | Belanja Cepat & Aman", page_icon="�
 # --- TITIK JANGKAR SCROLL KE ATAS ---
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
-# --- CSS CUSTOM V3 (FIX TOMBOL SEJAJAR DI HP) ---
+# --- CSS CUSTOM FINAL V4 (ANTI-STACKING) ---
 st.markdown("""
 <style>
-    /* 1. GLOBAL FONT */
+    /* 1. GLOBAL */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
     html, body, [class*="css"]  { font-family: 'Poppins', sans-serif; }
-
-    /* 2. LAYOUT UTAMA */
+    
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 5rem !important;
@@ -35,7 +34,7 @@ st.markdown("""
         padding-right: 0.5rem !important;
     }
 
-    /* 3. TOMBOL GRADIENT */
+    /* 2. TOMBOL GLOBAL */
     .stButton>button {
         width: 100%;
         border-radius: 8px !important;
@@ -44,100 +43,78 @@ st.markdown("""
         color: white !important;
         border: none !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        padding: 0px !important; /* Hilangkan padding tebal */
-        height: 35px !important; /* Paksa tinggi tombol */
-        line-height: 35px !important;
-        margin-top: 0px !important;
-    }
-    .stButton>button:active { transform: scale(0.95); }
-
-    /* Tombol Minus (Abu-abu) */
-    div[data-testid="column"] button:contains("−") {
-        background: #eef2f5 !important;
-        color: #333 !important;
+        height: auto !important;
+        padding: 5px 10px;
     }
 
-    /* 4. GAMBAR PRODUK */
+    /* 3. GAMBAR & KARTU */
     div[data-testid="stImage"] img {
         width: 100% !important;
-        object-fit: contain !important;
+        object-fit: cover !important;
         border-radius: 8px 8px 0 0 !important;
     }
-
-    /* === TAMPILAN LAPTOP === */
-    @media (min-width: 641px) {
-        div[data-testid="stImage"] img { height: 160px !important; }
-    }
-
-    /* === TAMPILAN HP (FIX AGRESIF) === */
-    @media (max-width: 640px) {
-        /* A. Gambar Kecil */
-        div[data-testid="stImage"] img { height: 100px !important; }
-        
-        /* B. Judul & Teks */
-        .nama-produk { font-size: 13px !important; height: 35px !important; }
-        
-        /* C. JURUS PAKSA SEJAJAR (ROW) */
-        
-        /* 1. Target Kontainer Kolom di dalam Kartu */
-        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] {
-            flex-direction: row !important; /* Wajib baris ke samping */
-            flex-wrap: nowrap !important; /* Dilarang turun ke bawah */
-            gap: 5px !important;
-            align-items: center !important;
-        }
-
-        /* 2. Target Kolom Anakannya (Si Minus, Angka, Plus) */
-        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] [data-testid="column"] {
-            width: 33% !important; /* Lebar dibagi 3 rata */
-            flex: 1 1 auto !important; 
-            min-width: 10px !important; /* Izinkan mengecil */
-        }
-        
-        /* 3. Rapikan Angka di Tengah */
-        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] [data-testid="column"] > div {
-             display: flex !important;
-             justify-content: center !important;
-             align-items: center !important;
-             height: 100% !important;
-        }
-
-        /* 4. Padding Tombol HP (Biar muat) */
-        .stButton>button {
-            font-size: 14px !important;
-            height: 32px !important; 
-            min-height: 32px !important;
-        }
-        
-        /* 5. Kurangi Margin Kartu */
-        div[data-testid="stVerticalBlockBorderWrapper"] {
-            padding: 8px !important;
-            gap: 5px !important;
-        }
-        /* Hilangkan gap vertikal bawaan elemen */
-        div[data-testid="element-container"] {
-            margin-bottom: 5px !important;
-        }
-    }
-
-    /* 5. STYLE CARD */
+    
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: white;
-        border-radius: 12px;
+        border-radius: 10px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         border: 1px solid #f0f0f0;
+        padding: 10px !important;
     }
 
-    /* 6. TEKS JUDUL */
     .nama-produk { 
         font-weight: 600; color: #2c3e50;
         overflow: hidden; display: -webkit-box; 
         -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
-        margin-top: 4px; margin-bottom: 4px;
+        margin-top: 5px; margin-bottom: 5px;
         line-height: 1.2;
     }
+
+    /* === KHUSUS LAPTOP === */
+    @media (min-width: 641px) {
+        div[data-testid="stImage"] img { height: 160px !important; }
+    }
+
+    /* === KHUSUS HP (INTI PERBAIKAN) === */
+    @media (max-width: 640px) {
+        /* A. Gambar Kecil */
+        div[data-testid="stImage"] img { height: 110px !important; }
+        .nama-produk { font-size: 13px !important; height: 35px !important; }
+
+        /* B. PAKSA KOLOM SEJAJAR (NO WRAP) */
+        
+        /* Target baris kolom di dalam kartu */
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"] {
+            flex-direction: row !important; /* Paksa baris ke samping */
+            flex-wrap: nowrap !important;   /* Dilarang turun baris */
+            gap: 4px !important;            /* Jarak antar tombol tipis */
+        }
+
+        /* Target setiap kolom (tombol -, angka, tombol +) */
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="column"] {
+            min-width: 0px !important; /* INI KUNCINYA: Hapus batas minimal lebar */
+            width: 33% !important;     /* Bagi 3 rata */
+            flex: 1 !important;        /* Flexible */
+        }
+        
+        /* C. Tombol HP didesain ulang */
+        .stButton>button {
+            padding: 0px !important;    /* Hapus padding dalam tombol */
+            height: 32px !important;    /* Tinggi tombol fix */
+            min-height: 32px !important;
+            font-size: 14px !important;
+            line-height: 32px !important;
+            margin: 0 !important;
+        }
+        
+        /* Tombol Minus (Warna Abu) */
+        div[data-testid="column"] button:contains("−") {
+            background: #eef2f5 !important;
+            color: #333 !important;
+        }
+    }
     
-    /* 7. FLOATING TOTAL */
+    /* 4. FLOATING CART */
     .floating-total {
         position: fixed; bottom: 15px; left: 2.5%; width: 95%;
         background: rgba(255, 255, 255, 0.98);
@@ -145,11 +122,9 @@ st.markdown("""
         border: 1px solid #00AAFF;
         box-shadow: 0px 4px 15px rgba(0,170,255,0.2);
         z-index: 99999; text-align: center;
-        display: flex; justify-content: space-between; align-items: center;
     }
 </style>
 """, unsafe_allow_html=True)
-
 # --- FUNGSI BANTUAN ---
 def format_rupiah(angka):
     return f"Rp {angka:,.0f}".replace(",", ".")
@@ -384,56 +359,46 @@ elif menu == "🛍️ Pesan Barang":
 
         st.header("🛍️ Etalase")
         
-        # --- FRAGMENT KARTU PRODUK (TAMPILAN BARU LEBIH CANTIK) ---
+        # --- FRAGMENT KARTU PRODUK (UPDATE GAP) ---
         @st.fragment
         def kartu_produk_live(item):
-            with st.container(border=True): # Container ini akan kena CSS shadow & rounded
-                # 1. Gambar Produk
+            with st.container(border=True):
+                # 1. Gambar
                 img = item['gambar_url'] if item.get('gambar_url') else "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
                 st.image(img, use_container_width=True)
                 
-                # 2. Judul, Harga, & Stok (HTML Custom agar rapi)
+                # 2. Judul & Info
                 st.markdown(f"""
                 <div class="nama-produk">{item['nama_barang']}</div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <div style="color:#00AAFF; font-weight:700; font-size:16px;">{format_rupiah(item['harga'])}</div>
-                    <div style="font-size:11px; color:#555; background:#f0f2f6; padding: 4px 8px; border-radius:6px; border: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="color:#00AAFF; font-weight:700; font-size:15px;">{format_rupiah(item['harga'])}</div>
+                    <div style="font-size:10px; color:#555; background:#f0f2f6; padding: 3px 6px; border-radius:4px;">
                         Stok: {item['stok']}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # 3. Logika Tombol (+ -)
+                # 3. Tombol (+ -)
                 qty_di_keranjang = sum(1 for x in st.session_state.keranjang if x['nama'] == item['nama_barang'])
                 
-                c_min, c_val, c_plus = st.columns([1, 1, 1])
+                # PERUBAHAN PENTING DISINI: gap="small"
+                c_min, c_val, c_plus = st.columns([1, 1, 1], gap="small")
+                
                 with c_min:
-                    # Tombol Minus (Warna abu-abu dr CSS)
                     if st.button("−", key=f"min_{item['id']}"): 
                         if qty_di_keranjang > 0:
                             kurangi_dari_keranjang(item['nama_barang'])
                             st.rerun()
                 with c_val:
-                    # Angka Qty di tengah
-                    st.markdown(f"<div style='text-align:center; font-weight:bold; font-size:18px; padding-top:2px;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
+                    # Angka Qty
+                    st.markdown(f"<div style='text-align:center; font-weight:bold; font-size:16px; line-height:35px;'>{qty_di_keranjang}</div>", unsafe_allow_html=True)
                 with c_plus:
-                    # Tombol Plus (Warna Biru dr CSS)
                     if st.button("➕", key=f"plus_{item['id']}"):
                         if qty_di_keranjang < item['stok']:
                             tambah_ke_keranjang(item['nama_barang'], item['harga'])
                             st.rerun()
                         else:
-                            st.toast("Stok Habis!", icon="⚠️")
-        # LOAD BARANG
-        res_b = supabase.table("barang").select("*").gt("stok", 0).order('nama_barang').execute()
-        items = res_b.data
-        
-        if items:
-            cols = st.columns(2) 
-            for i, item in enumerate(items):
-                with cols[i % 2]:
-                    kartu_produk_live(item)
-            st.write("\n" * 8)
+                            st.toast("Habis!", icon="⚠️")
 
     # === TAB 2: CHECKOUT ===
     with tab_checkout:
@@ -646,6 +611,7 @@ elif menu == "🔍 Lacak Pesanan":
                         st.error(f"Gagal membatalkan. Error: {e}")
         else:
             st.error("Nomor Resi tidak ditemukan.")
+
 
 
 
