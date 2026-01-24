@@ -19,7 +19,6 @@ except:
 st.set_page_config(page_title="e-PAS Mart", page_icon="🛍️", layout="wide")
 
 # --- TITIK JANGKAR SCROLL KE ATAS ---
-# Ini target tujuan saat tombol diklik
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
 # --- CSS CUSTOM LENGKAP ---
@@ -30,7 +29,7 @@ st.markdown("""
 
     .block-container {
         padding-top: 1rem !important;
-        padding-bottom: 7rem !important; /* Ruang untuk Floating Bar */
+        padding-bottom: 7rem !important; /* Ruang jaga-jaga untuk Floating Bar */
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
     }
@@ -75,7 +74,7 @@ st.markdown("""
         }
     }
 
-    /* 4. JURUS FLOATING BOTTOM BAR (KERANJANG MELAYANG) */
+    /* 4. FLOATING BOTTOM BAR (KERANJANG MELAYANG) */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) {
         position: fixed; bottom: 20px; left: 2.5%; width: 95%; z-index: 999999;
         background: white; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
@@ -86,40 +85,30 @@ st.markdown("""
         border-radius: 50px !important; height: 40px !important;
     }
 
-    /* 5. BACK TO TOP (MINIMALIS & SAMAR) */
+    /* 5. BACK TO TOP (UPDATE POSISI & GHOST MODE) */
     .back-to-top {
         position: fixed; 
-        bottom: 100px; /* Posisi di atas Floating Bar */
+        bottom: 30px; /* POSISI DEFAULT: Di Kanan Bawah */
         right: 20px;
         
-        /* Tampilan Bulat Kecil */
-        width: 40px; 
-        height: 40px; 
-        border-radius: 50%;
+        width: 45px; height: 45px; border-radius: 50%;
+        background-color: rgba(0, 170, 255, 0.3); /* Transparan (Ghost) */
+        color: rgba(255, 255, 255, 0.8) !important;
         
-        /* Warna Biru Transparan (Biar tidak semak) */
-        background-color: rgba(0, 170, 255, 0.4); 
-        color: white !important;
-        
-        /* Teks Icon Tengah */
-        text-align: center; 
-        line-height: 40px; 
-        font-size: 20px;
-        
-        /* Hilangkan Dekorasi Link */
-        text-decoration: none; 
-        z-index: 999999;
-        
-        /* Efek Halus */
+        text-align: center; line-height: 45px; font-size: 22px;
+        text-decoration: none; z-index: 999990; /* Di bawah Z-index Floating Bar */
         backdrop-filter: blur(2px);
         transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.5);
     }
     
-    /* Saat Disentuh/Hover jadi Terang */
+    /* Efek saat disentuh/hover */
     .back-to-top:hover {
-        background-color: rgba(0, 170, 255, 1); /* Jadi Biru Jelas */
-        transform: translateY(-3px); /* Efek naik dikit */
-        box-shadow: 0 4px 10px rgba(0,170,255,0.4);
+        background-color: #00AAFF; /* Jadi Biru Terang */
+        color: white !important;
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,170,255,0.3);
+        opacity: 1;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -369,6 +358,14 @@ elif menu == "🛍️ Pesan Barang":
 
     # --- TOMBOL MELAYANG BAWAH (KERANJANG) ---
     if total_duit > 0:
+        # Jika keranjang ada isi, kita naikkan posisi tombol Back to Top secara otomatis
+        # dengan menyuntikkan CSS dinamis
+        st.markdown("""
+        <style>
+            .back-to-top { bottom: 100px !important; } 
+        </style>
+        """, unsafe_allow_html=True)
+
         with st.container(border=True):
             st.markdown('<span class="floating-bar-marker"></span>', unsafe_allow_html=True)
             c_float_1, c_float_2 = st.columns([1.5, 1], vertical_alignment="center")
