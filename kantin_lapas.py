@@ -23,14 +23,34 @@ st.set_page_config(page_title="e-PAS Mart", page_icon="🛍️", layout="wide")
 # --- TITIK JANGKAR SCROLL KE ATAS ---
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
-# --- CSS CUSTOM LENGKAP ---
+# --- CSS CUSTOM LENGKAP (ANTI REFRESH MAXIMAL) ---
 st.markdown("""
 <style>
+    /* ========================================= */
+    /* 🛑 ZONA ANTI PULL-TO-REFRESH (MATIKAN TOTAL) */
+    /* ========================================= */
+    
+    /* 1. Kunci Body & HTML */
     html, body {
         overscroll-behavior-y: none !important;
         overscroll-behavior: none !important;
     }
-    
+
+    /* 2. Kunci Container Utama Streamlit (Ini yang sering lolos) */
+    div[data-testid="stAppViewContainer"] {
+        overscroll-behavior-y: none !important;
+        overscroll-behavior: none !important;
+    }
+
+    /* 3. Kunci Wrapper Aplikasi */
+    .stApp {
+        overscroll-behavior-y: none !important;
+    }
+
+    /* ========================================= */
+    /* 🎨 CSS TAMPILAN LAINNYA */
+    /* ========================================= */
+
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
     html, body, [class*="css"]  { font-family: 'Poppins', sans-serif; }
 
@@ -41,7 +61,7 @@ st.markdown("""
         padding-right: 0.5rem !important;
     }
 
-    /* 1. GAMBAR & KARTU */
+    /* GAMBAR & KARTU */
     div[data-testid="stImage"] img {
         width: 100% !important;
         aspect-ratio: 1/1; 
@@ -56,7 +76,7 @@ st.markdown("""
         border: 1px solid #eee; overflow: hidden;
     }
 
-    /* 2. GRID 2 KOLOM DI HP */
+    /* GRID 2 KOLOM DI HP */
     @media (max-width: 640px) {
         div[data-testid="column"] {
             width: 50% !important; flex: 0 0 50% !important;
@@ -69,7 +89,7 @@ st.markdown("""
         }
     }
 
-    /* 3. TEKS PRODUK */
+    /* TEKS PRODUK */
     .info-box { padding: 8px; }
     .nama-produk { 
         font-size: 13px; font-weight: 600; color: #333;
@@ -81,7 +101,7 @@ st.markdown("""
     .harga-produk { color: #00AAFF; font-weight: 700; font-size: 14px; }
     .stok-produk { font-size: 10px; color: #888; margin-bottom: 8px; }
 
-    /* 4. FLOATING BOTTOM BAR */
+    /* FLOATING BOTTOM BAR */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.floating-bar-marker) {
         position: fixed; bottom: 15px; left: 2.5%; width: 95%; z-index: 999999;
         background: white; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
@@ -94,7 +114,7 @@ st.markdown("""
         background-color: #00AAFF !important; border: none !important;
     }
 
-    /* 5. BACK TO TOP (GHOST MODE) */
+    /* BACK TO TOP (GHOST MODE) */
     .back-to-top {
         position: fixed; bottom: 30px; right: 20px;
         width: 45px; height: 45px; border-radius: 50%;
