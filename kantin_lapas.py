@@ -113,7 +113,7 @@ def format_rupiah(angka):
     return f"Rp {angka:,.0f}".replace(",", ".")
 
 def generate_resi():
-    tanggal = time.strftime("%d%m")
+    tanggal = time.strftime('%d-%m-%Y %H:%M')} WIB", fill="black")
     acak = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
     return f"KANTIN-{tanggal}-{acak}"
 
@@ -169,7 +169,7 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     d.line((20, 70, 480, 70), fill="black", width=2)
     y = 90
     d.text((30, y), f"NO. RESI  : {resi}", fill="black"); y+=25
-    d.text((30, y), f"TANGGAL   : {time.strftime('%d-%m-%Y %H:%M')}", fill="black"); y+=25
+    d.text((30, y), f"TANGGAL   : {waktu_skrg.strftime('%d-%m-%Y %H:%M')} WIB", fill="black")
     d.text((30, y), f"PENGIRIM  : {data_pesanan['nama_pemesan']}", fill="black"); y+=25
     d.text((30, y), f"PENERIMA  : {data_pesanan['untuk_siapa']}", fill="black"); y+=25
     d.line((20, y+10, 480, y+10), fill="gray", width=1)
@@ -519,5 +519,6 @@ elif menu == "🔍 Lacak Pesanan":
                     st.write(f"Error sistem waktu: {e}")
         else:
             st.error("Tidak ditemukan.")
+
 
 
