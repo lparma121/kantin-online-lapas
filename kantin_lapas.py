@@ -157,7 +157,7 @@ def tampilkan_resi_copy_otomatis(resi_text):
     """
     components.html(html_code, height=100)
 
-# --- GENERATOR GAMBAR ---
+# --- GENERATOR GAMBAR (FIXED WIB) ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     width, height = 500, 700
     img = Image.new('RGB', (width, height), color='white')
@@ -168,8 +168,13 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     d.text((150, 40), "Bukti Transaksi Resmi", fill="gray")
     d.line((20, 70, 480, 70), fill="black", width=2)
     y = 90
+    
+    # --- LOGIKA TANGGAL WIB (UTC + 7) ---
+    waktu_skrg = datetime.now(timezone.utc) + timedelta(hours=7)
+    str_waktu = waktu_skrg.strftime('%d-%m-%Y %H:%M')
+    
     d.text((30, y), f"NO. RESI  : {resi}", fill="black"); y+=25
-    d.text((30, y), f"TANGGAL   : {time.strftime('%d-%m-%Y %H:%M')}", fill="black"); y+=25
+    d.text((30, y), f"TANGGAL   : {str_waktu} WIB", fill="black"); y+=25
     d.text((30, y), f"PENGIRIM  : {data_pesanan['nama_pemesan']}", fill="black"); y+=25
     d.text((30, y), f"PENERIMA  : {data_pesanan['untuk_siapa']}", fill="black"); y+=25
     d.line((20, y+10, 480, y+10), fill="gray", width=1)
@@ -415,7 +420,6 @@ elif menu == "🛍️ Pesan Barang":
                                         resi = generate_resi()
                                         
                                         # PERBAIKAN: PAKSA KIRIM WAKTU DARI PYTHON
-                                        # Supaya tidak ada lagi "Menunggu sinkronisasi"
                                         waktu_sekarang_iso = datetime.now(timezone.utc).isoformat()
                                         
                                         data = {
@@ -423,7 +427,7 @@ elif menu == "🛍️ Pesan Barang":
                                             "item_pesanan": items_str, "total_harga": total_duit,
                                             "bukti_transfer": url, "status": "Menunggu Verifikasi",
                                             "cara_bayar": bayar, "no_resi": resi,
-                                            "created_at": waktu_sekarang_iso # << TAMBAHAN PENTING
+                                            "created_at": waktu_sekarang_iso
                                         }
                                         supabase.table("pesanan").insert(data).execute()
                                         
@@ -479,44 +483,49 @@ elif menu == "🔍 Lacak Pesanan":
                     waktu_str = d.get('created_at')
                     
                     if not waktu_str:
-                        st.caption("Menunggu sinkronisasi waktu server...")
+                        # Fallback jika data lama kosong (PENTING AGAR TIDAK ERROR)
+                        waktu_pesan = datetime.now(timezone.utc)
                     else:
                         waktu_pesan_str = waktu_str.replace('Z', '+00:00')
                         waktu_pesan = datetime.fromisoformat(waktu_pesan_str)
-                        waktu_sekarang = datetime.now(timezone.utc)
-                        selisih = waktu_sekarang - waktu_pesan
-                        batas_waktu = timedelta(hours=4)
+                    
+                    waktu_sekarang = datetime.now(timezone.utc)
+                    selisih = waktu_sekarang - waktu_pesan
+                    batas_waktu = timedelta(hours=4)
+                    
+                    if selisih >= batas_waktu:
+                        st.error("Waktu tunggu 4 jam terlewati. Silakan batalkan jika perlu.")
+                        if st.button("❌ Batalkan & Refund Sekarang"):
+                            try:
+                                refund = 0
+                                for i_str in d['item_pesanan'].split(", "):
+                                    q, n = i_str.split("x ", 1)
+                                    q = int(q)
+                                    cur = supabase.table("barang").select("*").eq("nama_barang", n).execute()
+                                    if cur.data:
+                                        supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
+                                        refund += cur.data[0]['harga']*q
+                                
+                                supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
+                                vcr = buat_voucher_image(d['nama_pemesan'], refund, d['no_resi'])
+                                b64_v = image_to_base64(vcr)
+                                st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
+                                st.download_button("Download Voucher", vcr, f"V_{d['no_resi']}.jpg", "image/jpeg")
+                                del st.session_state.resi_aktif
+                                st.stop()
+                            except Exception as e: st.error(f"Gagal: {e}")
+                    else:
+                        sisa = batas_waktu - selisih
+                        total_detik = int(sisa.total_seconds())
+                        jam, sisa_detik = divmod(total_detik, 3600)
+                        menit, _ = divmod(sisa_detik, 60)
                         
-                        if selisih >= batas_waktu:
-                            st.error("Waktu tunggu 4 jam terlewati. Silakan batalkan jika perlu.")
-                            if st.button("❌ Batalkan & Refund Sekarang"):
-                                try:
-                                    refund = 0
-                                    for i_str in d['item_pesanan'].split(", "):
-                                        q, n = i_str.split("x ", 1)
-                                        q = int(q)
-                                        cur = supabase.table("barang").select("*").eq("nama_barang", n).execute()
-                                        if cur.data:
-                                            supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
-                                            refund += cur.data[0]['harga']*q
-                                    
-                                    supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
-                                    vcr = buat_voucher_image(d['nama_pemesan'], refund, d['no_resi'])
-                                    b64_v = image_to_base64(vcr)
-                                    st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
-                                    st.download_button("Download Voucher", vcr, f"V_{d['no_resi']}.jpg", "image/jpeg")
-                                    del st.session_state.resi_aktif
-                                    st.stop()
-                                except Exception as e: st.error(f"Gagal: {e}")
+                        if not waktu_str:
+                             st.caption("⚠️ Data waktu tidak ditemukan (Pesanan Lama).")
                         else:
-                            sisa = batas_waktu - selisih
-                            total_detik = int(sisa.total_seconds())
-                            jam, sisa_detik = divmod(total_detik, 3600)
-                            menit, _ = divmod(sisa_detik, 60)
-                            st.warning(f"⏳ **Hitung Mundur:** Tombol batal akan muncul dalam **{jam} Jam {menit} Menit**.")
+                             st.warning(f"⏳ **Hitung Mundur:** Tombol batal akan muncul dalam **{jam} Jam {menit} Menit**.")
                             
                 except Exception as e:
                     st.write(f"Error sistem waktu: {e}")
         else:
             st.error("Tidak ditemukan.")
-
