@@ -221,14 +221,39 @@ with st.sidebar:
 # 1. BERANDA
 # =========================================
 if menu == "🏠 Beranda":
-    c_kiri, c_tengah, c_kanan = st.columns([0.1, 3, 0.1])
+    c_kiri, c_tengah, c_kanan = st.columns([0.5, 3, 0.5])
     with c_tengah:
-        st.markdown("""
-        <img src="https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg" 
-             style="width: 100%; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-        """, unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center;'>Belanja Aman & Transparan</h3>", unsafe_allow_html=True)
-    st.info("💡 e-PAS Mart menerapkan prinsip **100% Cashless (Non-Tunai)**.")
+        st.image("https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg", use_container_width=True)
+    
+    st.write("") 
+    st.markdown("""
+    <div style='text-align: center; font-size: 18px;'>
+        Selamat datang di era baru pelayanan <b>Lapas Arga Makmur</b>.<br>
+        Belanja Aman, Transparan, dan Tanpa Uang Tunai.
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+    st.info("💡 **Mengapa e-PAS Mart berbeda?** Karena kami menerapkan prinsip **100% Cashless (Non-Tunai)**.")
+    st.subheader("✨ Keunggulan e-PAS Mart")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        with st.container(border=True):
+            st.markdown("### 💳")
+            st.markdown("**Sistem Pembayaran Digital**")
+            st.caption("Tidak ada lagi uang fisik yang beredar. WBP menggunakan saldo virtual.")
+    with col2:
+        with st.container(border=True):
+            st.markdown("### 🛡️")
+            st.markdown("**Cegah Pungli & Aman**")
+            st.caption("Tanpa uang tunai, potensi penyimpangan dan kejahatan diminimalisir.")
+    with col3:
+        with st.container(border=True):
+            st.markdown("### 📝")
+            st.markdown("**Tercatat & Terpantau**")
+            st.caption("Keluarga lebih tenang karena dana terpantau jelas penggunaannya.")
+    st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
 # 2. PESAN BARANG
@@ -491,3 +516,4 @@ elif menu == "🔍 Lacak Pesanan":
                     st.write(f"Error sistem waktu: {e}")
         else:
             st.error("Tidak ditemukan.")
+
