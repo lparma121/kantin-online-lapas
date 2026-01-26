@@ -459,7 +459,7 @@ elif menu == "🛍️ Pesan Barang":
                     show_cart_modal()
 
 # =========================================
-# 3. LACAK PESANAN (LOGIKA TIMER 4 JAM & TEXT BARU)
+# 3. LACAK PESANAN (UPDATE: ULASAN & KOMENTAR)
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
@@ -468,12 +468,14 @@ elif menu == "🔍 Lacak Pesanan":
         st.session_state.resi_aktif = resi_in
     
     if 'resi_aktif' in st.session_state:
+        # PENTING: Select * agar kolom 'rating' dan 'ulasan' ikut terambil
         res = supabase.table("pesanan").select("*").eq("no_resi", st.session_state.resi_aktif).execute()
         if res.data:
             d = res.data[0]
             st.success(f"Status: {d['status']}")
             st.write(f"Item: {d['item_pesanan']}")
             
+            # --- SKENARIO 1: MENUNGGU VERIFIKASI (BISA BATAL) ---
             if d['status'] == "Menunggu Verifikasi":
                 st.divider()
                 st.warning("⚠️ Opsi Pembatalan")
@@ -481,9 +483,7 @@ elif menu == "🔍 Lacak Pesanan":
                 
                 try:
                     waktu_str = d.get('created_at')
-                    
                     if not waktu_str:
-                        # Fallback jika data lama kosong (PENTING AGAR TIDAK ERROR)
                         waktu_pesan = datetime.now(timezone.utc)
                     else:
                         waktu_pesan_str = waktu_str.replace('Z', '+00:00')
@@ -494,7 +494,7 @@ elif menu == "🔍 Lacak Pesanan":
                     batas_waktu = timedelta(hours=4)
                     
                     if selisih >= batas_waktu:
-                        st.error("Waktu tunggu 4 jam terlewati. Silakan batalkan jika perlu.")
+                        st.error("Waktu tunggu 4 jam terlewati.")
                         if st.button("❌ Batalkan & Refund Sekarang"):
                             try:
                                 refund = 0
@@ -519,13 +519,53 @@ elif menu == "🔍 Lacak Pesanan":
                         total_detik = int(sisa.total_seconds())
                         jam, sisa_detik = divmod(total_detik, 3600)
                         menit, _ = divmod(sisa_detik, 60)
-                        
                         if not waktu_str:
-                             st.caption("⚠️ Data waktu tidak ditemukan (Pesanan Lama).")
+                             st.caption("⚠️ Data waktu tidak ditemukan.")
                         else:
                              st.warning(f"⏳ **Hitung Mundur:** Tombol batal akan muncul dalam **{jam} Jam {menit} Menit**.")
-                            
                 except Exception as e:
                     st.write(f"Error sistem waktu: {e}")
+
+            # --- SKENARIO 2: SELESAI (BERI ULASAN) ---
+            elif d['status'] == "Selesai":
+                st.divider()
+                st.subheader("⭐ Berikan Ulasan")
+                
+                # Cek apakah sudah pernah review (rating tidak Null)
+                # Pastikan di database kolom 'rating' default-nya adalah NULL
+                if d.get('rating') is None:
+                    with st.form("form_ulasan"):
+                        st.write("Bagaimana kepuasan Anda belanja di e-PAS Mart?")
+                        
+                        # Input Bintang
+                        bintang_opsi = {
+                            "5 - Sangat Puas 😍": 5,
+                            "4 - Puas 😊": 4,
+                            "3 - Cukup 😐": 3,
+                            "2 - Kurang 😕": 2,
+                            "1 - Kecewa 😡": 1
+                        }
+                        pilihan = st.selectbox("Rating Bintang", list(bintang_opsi.keys()))
+                        nilai_rating = bintang_opsi[pilihan]
+                        
+                        # Input Komentar
+                        komentar = st.text_area("Tulis komentar (opsional)")
+                        
+                        if st.form_submit_button("Kirim Ulasan"):
+                            try:
+                                supabase.table("pesanan").update({
+                                    "rating": nilai_rating,
+                                    "ulasan": komentar
+                                }).eq("id", d['id']).execute()
+                                st.success("Terima kasih atas ulasan Anda!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gagal kirim ulasan: {e}")
+                else:
+                    # Jika sudah review, tampilkan hasilnya
+                    st.info("✅ Anda sudah memberikan ulasan untuk pesanan ini.")
+                    st.markdown(f"**Rating:** {'⭐' * d['rating']}")
+                    if d.get('ulasan'):
+                        st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
         else:
             st.error("Tidak ditemukan.")
