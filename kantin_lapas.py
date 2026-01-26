@@ -509,16 +509,6 @@ elif menu == "🛍️ Pesan Barang":
                                         st.error("Gagal mengupload bukti transfer. Coba lagi.")
                                 except Exception as e:
                                     st.error(f"Terjadi kesalahan sistem: {e}")
-        if total_duit > 0:
-        with st.container(border=True):
-            st.markdown('<span class="floating-bar-marker"></span>', unsafe_allow_html=True)
-            c_float_1, c_float_2 = st.columns([1.5, 1], vertical_alignment="center")
-            with c_float_1:
-                st.markdown(f"<div style='font-size:14px; font-weight:bold; color:#333;'>Total: {format_rupiah(total_duit)}</div>", unsafe_allow_html=True)
-                st.caption(f"{total_qty} Barang")
-            with c_float_2:
-                if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
-                    show_cart_modal()
 
 # =========================================
 # 3. LACAK PESANAN (RATING & KOMENTAR)
@@ -615,5 +605,6 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
         else:
             st.error("Tidak ditemukan.")
+
 
 
