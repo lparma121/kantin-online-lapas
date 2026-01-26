@@ -415,9 +415,17 @@ elif menu == "🛍️ Pesan Barang":
                         st.write(f"• {x['qty']}x {x['nama']} ({format_rupiah(x['harga']*x['qty'])})")
                     st.divider()
                     st.markdown(f"### Total: {format_rupiah(total_duit)}")
-                    bayar = st.selectbox("Metode Bayar", ["Transfer Bank", "E-Wallet", "🎫 Voucher / Saldo Refund"])
-                    if "Voucher" in bayar: st.info("Upload Voucher.")
-                    else: st.warning("Transfer sesuai instruksi.")
+                    bayar = st.selectbox("Pilih Metode", 
+                                     ["Transfer Bank (BRI/BCA)", "E-Wallet (DANA/Gopay)", "🎫 Voucher / Saldo Refund"], 
+                                     label_visibility="collapsed")
+                
+                if "Transfer Bank" in bayar:
+                    st.warning("🏦 **Bank BRI**\nNo. Rek: **1234-5678-900**\nAn. Koperasi Lapas")
+                elif "E-Wallet" in bayar:
+                    st.warning("📱 **DANA / Gopay**\nNomor: **0812-3456-7890**\nAn. Admin Kantin")
+                elif "Voucher" in bayar:
+                    st.info("🎫 **Bayar Pakai Voucher**\nUpload Gambar Voucher sebagai pengganti transfer.")
+
 
                     with st.form("checkout"):
                         pemesan = st.text_input("Nama Pengirim")
@@ -573,3 +581,4 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
         else:
             st.error("Tidak ditemukan.")
+
