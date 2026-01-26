@@ -23,34 +23,40 @@ st.set_page_config(page_title="e-PAS Mart", page_icon="🛍️", layout="wide")
 # --- TITIK JANGKAR SCROLL KE ATAS ---
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
-# --- CSS CUSTOM LENGKAP (ANTI REFRESH MAXIMAL) ---
+# --- CSS & JS KHUSUS: JURUS ANTI REFRESH ULTIMATE ---
+# Kita gunakan JS untuk memastikan CSS disuntikkan paksa ke elemen root
+components.html("""
+<style>
+    /* 1. MATIKAN SCROLL DI LEVEL BROWSER (AKAR) */
+    html, body {
+        overscroll-behavior: none !important;
+        overflow: hidden !important; /* Ini kuncinya: Browser dilarang scroll */
+        height: 100% !important;
+    }
+
+    /* 2. PINDAHKAN SCROLL KE KONTAINER APLIKASI SAJA */
+    /* Streamlit punya container pembungkus, kita aktifkan scroll di situ */
+    div[data-testid="stAppViewContainer"] {
+        overflow-y: auto !important; /* Hanya boleh scroll vertikal di sini */
+        overscroll-behavior: none !important; /* Matikan efek membal (bounce) */
+        height: 100vh !important;
+        -webkit-overflow-scrolling: touch !important; /* Agar scroll di HP tetap licin/smooth */
+    }
+</style>
+<script>
+    // JS Tambahan: Mencegah event 'touchmove' yang memicu refresh di area header
+    document.addEventListener('touchmove', function(e) {
+        if (window.scrollY === 0 && e.touches[0].clientY > 0) {
+            // Jika di paling atas dan ditarik ke bawah -> Jangan lakukan apa-apa
+             // e.preventDefault(); // Opsional: kadang bikin scroll macet, jadi kita andalkan CSS di atas
+        }
+    }, { passive: false });
+</script>
+""", height=0, width=0)
+
+# --- CSS TAMPILAN (DESIGN) ---
 st.markdown("""
 <style>
-    /* ========================================= */
-    /* 🛑 ZONA ANTI PULL-TO-REFRESH (MATIKAN TOTAL) */
-    /* ========================================= */
-    
-    /* 1. Kunci Body & HTML */
-    html, body {
-        overscroll-behavior-y: none !important;
-        overscroll-behavior: none !important;
-    }
-
-    /* 2. Kunci Container Utama Streamlit (Ini yang sering lolos) */
-    div[data-testid="stAppViewContainer"] {
-        overscroll-behavior-y: none !important;
-        overscroll-behavior: none !important;
-    }
-
-    /* 3. Kunci Wrapper Aplikasi */
-    .stApp {
-        overscroll-behavior-y: none !important;
-    }
-
-    /* ========================================= */
-    /* 🎨 CSS TAMPILAN LAINNYA */
-    /* ========================================= */
-
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
     html, body, [class*="css"]  { font-family: 'Poppins', sans-serif; }
 
@@ -509,6 +515,7 @@ elif menu == "🔍 Lacak Pesanan":
                 try:
                     waktu_str = d.get('created_at')
                     if not waktu_str:
+                        # Fallback jika data lama kosong
                         waktu_pesan = datetime.now(timezone.utc)
                     else:
                         waktu_pesan_str = waktu_str.replace('Z', '+00:00')
@@ -545,7 +552,7 @@ elif menu == "🔍 Lacak Pesanan":
                         jam, sisa_detik = divmod(total_detik, 3600)
                         menit, _ = divmod(sisa_detik, 60)
                         if not waktu_str:
-                             st.caption("⚠️ Data waktu tidak ditemukan.")
+                             st.caption("⚠️ Data waktu tidak ditemukan (Pesanan Lama).")
                         else:
                              st.warning(f"⏳ **Hitung Mundur:** Tombol batal akan muncul dalam **{jam} Jam {menit} Menit**.")
                 except Exception as e:
@@ -557,12 +564,10 @@ elif menu == "🔍 Lacak Pesanan":
                 st.subheader("⭐ Berikan Ulasan")
                 
                 # Cek apakah sudah pernah review (rating tidak Null)
-                # Pastikan di database kolom 'rating' default-nya adalah NULL
                 if d.get('rating') is None:
                     with st.form("form_ulasan"):
                         st.write("Bagaimana kepuasan Anda belanja di e-PAS Mart?")
                         
-                        # Input Bintang
                         bintang_opsi = {
                             "5 - Sangat Puas 😍": 5,
                             "4 - Puas 😊": 4,
@@ -572,8 +577,6 @@ elif menu == "🔍 Lacak Pesanan":
                         }
                         pilihan = st.selectbox("Rating Bintang", list(bintang_opsi.keys()))
                         nilai_rating = bintang_opsi[pilihan]
-                        
-                        # Input Komentar
                         komentar = st.text_area("Tulis komentar (opsional)")
                         
                         if st.form_submit_button("Kirim Ulasan"):
@@ -587,7 +590,6 @@ elif menu == "🔍 Lacak Pesanan":
                             except Exception as e:
                                 st.error(f"Gagal kirim ulasan: {e}")
                 else:
-                    # Jika sudah review, tampilkan hasilnya
                     st.info("✅ Anda sudah memberikan ulasan untuk pesanan ini.")
                     st.markdown(f"**Rating:** {'⭐' * d['rating']}")
                     if d.get('ulasan'):
