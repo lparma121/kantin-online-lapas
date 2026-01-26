@@ -221,9 +221,12 @@ with st.sidebar:
 # 1. BERANDA
 # =========================================
 if menu == "🏠 Beranda":
-    c_kiri, c_tengah, c_kanan = st.columns([0.5, 3, 0.5])
+    c_kiri, c_tengah, c_kanan = st.columns([0.1, 3, 0.1])
     with c_tengah:
-        st.image("https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg", use_container_width=True)
+        st.markdown("""
+        <img src="https://gdvphhymxlhuarvxwvtm.supabase.co/storage/v1/object/public/KANTIN-ASSETS/banner/unnamed.jpg" 
+             style="width: 100%; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        """, unsafe_allow_html=True)
     
     st.write("") 
     st.markdown("""
@@ -516,4 +519,5 @@ elif menu == "🔍 Lacak Pesanan":
                     st.write(f"Error sistem waktu: {e}")
         else:
             st.error("Tidak ditemukan.")
+
 
