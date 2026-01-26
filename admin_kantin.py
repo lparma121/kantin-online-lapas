@@ -1,9 +1,17 @@
-
 import streamlit as st
 from supabase import create_client
 import time
 from PIL import Image
 import io
+
+# ==============================================================================
+# 1. KONFIGURASI & KONEKSI (JALAN PERTAMA KALI)
+# ==============================================================================
+st.set_page_config(page_title="Panel Admin Kantin", layout="wide", page_icon="👮")
+
+# --- INISIALISASI SESSION STATE (Status Login) ---
+if 'is_logged_in' not in st.session_state:
+    st.session_state['is_logged_in'] = False
 
 # --- KONEKSI DATABASE ---
 try:
@@ -11,23 +19,65 @@ try:
     KEY = st.secrets["SUPABASE_KEY"]
     supabase = create_client(URL, KEY)
 except:
-    st.error("Secret Supabase belum disetting!")
+    st.error("⚠️ Secret Supabase belum disetting!")
     st.stop()
 
-st.set_page_config(page_title="Panel Admin Kantin", layout="wide", page_icon="👮")
+# ==============================================================================
+# 2. SISTEM LOGIN & LOGOUT
+# ==============================================================================
 
-# --- LOGIN PROTEKSI ---
-# (Tips: Ganti password ini dengan yang lebih sulit nanti)
-pwd = st.sidebar.text_input("🔑 Password Admin", type="password")
-if pwd != "admin123":
-    st.warning("🔒 Silakan login terlebih dahulu.")
+# --- A. FUNGSI LOGOUT ---
+def logout():
+    st.session_state['is_logged_in'] = False
+    st.rerun()
+
+# --- B. HALAMAN LOGIN (Jika Belum Login) ---
+if not st.session_state['is_logged_in']:
+    # Tampilan Halaman Login (Tengah Layar)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.write("")
+        st.write("")
+        st.write("")
+        with st.container(border=True):
+            st.markdown("<h2 style='text-align: center;'>🔐 Login Admin</h2>", unsafe_allow_html=True)
+            st.write("---")
+            
+            with st.form("login_form"):
+                # CREDENTIALS (Bisa diganti)
+                username_input = st.text_input("Username")
+                password_input = st.text_input("Password", type="password")
+                
+                btn_login = st.form_submit_button("Masuk", type="primary", use_container_width=True)
+                
+                if btn_login:
+                    # GANTI USERNAME & PASSWORD DISINI
+                    if username_input == "admin" and password_input == "admin123":
+                        st.session_state['is_logged_in'] = True
+                        st.success("Login Berhasil!")
+                        time.sleep(0.5)
+                        st.rerun()
+                    else:
+                        st.error("❌ Username atau Password Salah!")
+    
+    # Hentikan eksekusi kode di bawah jika belum login
     st.stop()
 
-st.sidebar.success("✅ Login Berhasil")
-st.sidebar.markdown("---")
+# ==============================================================================
+# 3. DASHBOARD ADMIN (Hanya Muncul Jika Sudah Login)
+# ==============================================================================
 
-# --- NAVIGASI HALAMAN (Menu Sidebar) ---
-menu_admin = st.sidebar.radio("Navigasi Menu", ["📋 Daftar Pesanan", "📦 Manajemen Menu"])
+# --- SIDEBAR ADMIN ---
+with st.sidebar:
+    st.write(f"👤 **Halo, Admin!**")
+    
+    # TOMBOL LOGOUT
+    if st.button("🚪 Logout / Keluar", type="secondary", use_container_width=True):
+        logout()
+        
+    st.markdown("---")
+    menu_admin = st.radio("Navigasi Menu", ["📋 Daftar Pesanan", "📦 Manajemen Menu"])
+    st.markdown("---")
 
 # --- FUNGSI BANTUAN (HELPER) ---
 def kompres_gambar(upload_file):
