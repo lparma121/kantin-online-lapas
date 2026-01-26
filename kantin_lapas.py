@@ -23,38 +23,7 @@ st.set_page_config(page_title="e-PAS Mart", page_icon="🛍️", layout="wide")
 # --- TITIK JANGKAR SCROLL KE ATAS ---
 st.markdown('<div id="paling-atas"></div>', unsafe_allow_html=True)
 
-# --- CSS & JS KHUSUS: JURUS ANTI REFRESH ULTIMATE ---
-# Kita gunakan JS untuk memastikan CSS disuntikkan paksa ke elemen root
-components.html("""
-<style>
-    /* 1. MATIKAN SCROLL DI LEVEL BROWSER (AKAR) */
-    html, body {
-        overscroll-behavior: none !important;
-        overflow: hidden !important; /* Ini kuncinya: Browser dilarang scroll */
-        height: 100% !important;
-    }
-
-    /* 2. PINDAHKAN SCROLL KE KONTAINER APLIKASI SAJA */
-    /* Streamlit punya container pembungkus, kita aktifkan scroll di situ */
-    div[data-testid="stAppViewContainer"] {
-        overflow-y: auto !important; /* Hanya boleh scroll vertikal di sini */
-        overscroll-behavior: none !important; /* Matikan efek membal (bounce) */
-        height: 100vh !important;
-        -webkit-overflow-scrolling: touch !important; /* Agar scroll di HP tetap licin/smooth */
-    }
-</style>
-<script>
-    // JS Tambahan: Mencegah event 'touchmove' yang memicu refresh di area header
-    document.addEventListener('touchmove', function(e) {
-        if (window.scrollY === 0 && e.touches[0].clientY > 0) {
-            // Jika di paling atas dan ditarik ke bawah -> Jangan lakukan apa-apa
-             // e.preventDefault(); // Opsional: kadang bikin scroll macet, jadi kita andalkan CSS di atas
-        }
-    }, { passive: false });
-</script>
-""", height=0, width=0)
-
-# --- CSS TAMPILAN (DESIGN) ---
+# --- CSS TAMPILAN (CLEAN & LIGHT) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
@@ -188,7 +157,7 @@ def tampilkan_resi_copy_otomatis(resi_text):
     """
     components.html(html_code, height=100)
 
-# --- GENERATOR GAMBAR (FIXED WIB) ---
+# --- GENERATOR GAMBAR (WIB) ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     width, height = 500, 700
     img = Image.new('RGB', (width, height), color='white')
@@ -254,7 +223,7 @@ with st.sidebar:
     menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "🔍 Lacak Pesanan"])
 
 # =========================================
-# 1. BERANDA
+# 1. BERANDA (UPDATED: ADA ULASAN)
 # =========================================
 if menu == "🏠 Beranda":
     c_kiri, c_tengah, c_kanan = st.columns([0.1, 3, 0.1])
@@ -292,6 +261,33 @@ if menu == "🏠 Beranda":
             st.markdown("### 📝")
             st.markdown("**Tercatat & Terpantau**")
             st.caption("Keluarga lebih tenang karena dana terpantau jelas penggunaannya.")
+    
+    # --- FITUR BARU: MENAMPILKAN ULASAN TERBARU ---
+    st.write("")
+    st.write("")
+    st.subheader("💬 Apa Kata Mereka?")
+    
+    # Ambil 3 ulasan terbaru yang tidak kosong (rating tidak null)
+    try:
+        res_ulasan = supabase.table("pesanan").select("nama_pemesan, rating, ulasan").not_.is_("rating", "null").order("created_at", desc=True).limit(3).execute()
+        
+        if res_ulasan.data:
+            cols = st.columns(len(res_ulasan.data))
+            for i, u in enumerate(res_ulasan.data):
+                with cols[i]:
+                    with st.container(border=True):
+                        st.markdown(f"**{u['nama_pemesan']}**")
+                        st.markdown(f"{'⭐' * u['rating']}")
+                        if u['ulasan']:
+                            st.caption(f"\"{u['ulasan']}\"")
+                        else:
+                            st.caption("*Tanpa komentar*")
+        else:
+            st.caption("Belum ada ulasan. Jadilah yang pertama memberikan ulasan!")
+            
+    except Exception as e:
+        st.error("Gagal memuat ulasan.")
+        
     st.success("🚀 **e-PAS Mart:** Langkah maju Lapas Arga Makmur mewujudkan lingkungan yang bersih, modern, dan berintegritas.")
 
 # =========================================
@@ -300,11 +296,9 @@ if menu == "🏠 Beranda":
 elif menu == "🛍️ Pesan Barang":
     st.markdown("<h2 style='margin-bottom:10px;'>🛍️ Etalase</h2>", unsafe_allow_html=True)
 
-    # Hitung total
     total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
     total_qty = sum(item['qty'] for item in st.session_state.keranjang)
 
-    # --- DIALOG KERANJANG ---
     @st.dialog("🛒 Keranjang Belanja")
     def show_cart_modal():
         if not st.session_state.keranjang:
@@ -323,7 +317,6 @@ elif menu == "🛍️ Pesan Barang":
             if st.button("💳 Lanjut Pembayaran", type="primary", use_container_width=True):
                  st.toast("Silakan klik Tab 'Pembayaran'", icon="✅")
 
-    # --- TABS ---
     tab_menu, tab_checkout = st.tabs(["🍔 Pilih Menu", "💳 Pembayaran"])
 
     # === TAB 1: ETALASE ===
@@ -386,16 +379,13 @@ elif menu == "🛍️ Pesan Barang":
     with tab_checkout:
         st.header("📝 Konfirmasi")
         
-        # LOGIKA TAMPILAN: JIKA SUKSES -> NOTA | JIKA BELUM -> FORM
+        # VALIDASI FILE UPLOAD 5MB (OPSIONAL - Jika tidak pakai config.toml)
+        # Saya masukkan di sini sebagai pengaman tambahan
+        
         if st.session_state.nota_sukses:
-            # --- TAMPILAN SUKSES ---
             res_data = st.session_state.nota_sukses
             st.success("✅ Pesanan Berhasil Dikirim!")
-            
-            # --- FITUR KHUSUS: KOTAK COPY OTOMATIS (JS) ---
             tampilkan_resi_copy_otomatis(res_data['resi'])
-            # ----------------------------------------------
-            
             b64 = image_to_base64(res_data['data'])
             st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:250px; border:1px solid #ddd; margin-bottom:10px;">', unsafe_allow_html=True)
             
@@ -416,7 +406,6 @@ elif menu == "🛍️ Pesan Barang":
             st.info("Simpan resi ini untuk melacak status pesanan.")
             
         else:
-            # --- TAMPILAN FORM ---
             if not st.session_state.keranjang:
                 st.info("Keranjang kosong.")
             else:
@@ -437,7 +426,10 @@ elif menu == "🛍️ Pesan Barang":
                         bukti = st.file_uploader("Upload Bukti", type=['jpg','png'], key="bukti_fix")
                         
                         if st.form_submit_button("✅ Kirim Pesanan", type="primary"):
-                            if not (pemesan and untuk and wa and bukti):
+                            # VALIDASI MANUAL 5MB
+                            if bukti and bukti.size > 5 * 1024 * 1024:
+                                st.error("⚠️ File terlalu besar! Maksimal 5MB.")
+                            elif not (pemesan and untuk and wa and bukti):
                                 st.error("Data tidak lengkap!")
                             elif "bin" not in untuk.lower() and "binti" not in untuk.lower():
                                 st.error("Wajib pakai Bin/Binti!")
@@ -449,8 +441,6 @@ elif menu == "🛍️ Pesan Barang":
                                     if url:
                                         items_str = ", ".join([f"{x['qty']}x {x['nama']}" for x in st.session_state.keranjang])
                                         resi = generate_resi()
-                                        
-                                        # PERBAIKAN: PAKSA KIRIM WAKTU DARI PYTHON
                                         waktu_sekarang_iso = datetime.now(timezone.utc).isoformat()
                                         
                                         data = {
@@ -474,7 +464,6 @@ elif menu == "🛍️ Pesan Barang":
                                     else: st.error("Gagal upload.")
                                 except Exception as e: st.error(f"Error: {e}")
 
-    # --- TOMBOL MELAYANG ---
     class_tambahan = "naik" if total_duit > 0 else ""
     st.markdown(f'<a href="#paling-atas" class="back-to-top {class_tambahan}">⬆️</a>', unsafe_allow_html=True)
 
@@ -490,7 +479,7 @@ elif menu == "🛍️ Pesan Barang":
                     show_cart_modal()
 
 # =========================================
-# 3. LACAK PESANAN (UPDATE: ULASAN & KOMENTAR)
+# 3. LACAK PESANAN (RATING & KOMENTAR)
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
@@ -499,14 +488,12 @@ elif menu == "🔍 Lacak Pesanan":
         st.session_state.resi_aktif = resi_in
     
     if 'resi_aktif' in st.session_state:
-        # PENTING: Select * agar kolom 'rating' dan 'ulasan' ikut terambil
         res = supabase.table("pesanan").select("*").eq("no_resi", st.session_state.resi_aktif).execute()
         if res.data:
             d = res.data[0]
             st.success(f"Status: {d['status']}")
             st.write(f"Item: {d['item_pesanan']}")
             
-            # --- SKENARIO 1: MENUNGGU VERIFIKASI (BISA BATAL) ---
             if d['status'] == "Menunggu Verifikasi":
                 st.divider()
                 st.warning("⚠️ Opsi Pembatalan")
@@ -515,7 +502,6 @@ elif menu == "🔍 Lacak Pesanan":
                 try:
                     waktu_str = d.get('created_at')
                     if not waktu_str:
-                        # Fallback jika data lama kosong
                         waktu_pesan = datetime.now(timezone.utc)
                     else:
                         waktu_pesan_str = waktu_str.replace('Z', '+00:00')
@@ -552,28 +538,22 @@ elif menu == "🔍 Lacak Pesanan":
                         jam, sisa_detik = divmod(total_detik, 3600)
                         menit, _ = divmod(sisa_detik, 60)
                         if not waktu_str:
-                             st.caption("⚠️ Data waktu tidak ditemukan (Pesanan Lama).")
+                             st.caption("⚠️ Data waktu tidak ditemukan.")
                         else:
                              st.warning(f"⏳ **Hitung Mundur:** Tombol batal akan muncul dalam **{jam} Jam {menit} Menit**.")
                 except Exception as e:
                     st.write(f"Error sistem waktu: {e}")
 
-            # --- SKENARIO 2: SELESAI (BERI ULASAN) ---
             elif d['status'] == "Selesai":
                 st.divider()
                 st.subheader("⭐ Berikan Ulasan")
                 
-                # Cek apakah sudah pernah review (rating tidak Null)
                 if d.get('rating') is None:
                     with st.form("form_ulasan"):
                         st.write("Bagaimana kepuasan Anda belanja di e-PAS Mart?")
-                        
                         bintang_opsi = {
-                            "5 - Sangat Puas 😍": 5,
-                            "4 - Puas 😊": 4,
-                            "3 - Cukup 😐": 3,
-                            "2 - Kurang 😕": 2,
-                            "1 - Kecewa 😡": 1
+                            "5 - Sangat Puas 😍": 5, "4 - Puas 😊": 4,
+                            "3 - Cukup 😐": 3, "2 - Kurang 😕": 2, "1 - Kecewa 😡": 1
                         }
                         pilihan = st.selectbox("Rating Bintang", list(bintang_opsi.keys()))
                         nilai_rating = bintang_opsi[pilihan]
@@ -582,17 +562,14 @@ elif menu == "🔍 Lacak Pesanan":
                         if st.form_submit_button("Kirim Ulasan"):
                             try:
                                 supabase.table("pesanan").update({
-                                    "rating": nilai_rating,
-                                    "ulasan": komentar
+                                    "rating": nilai_rating, "ulasan": komentar
                                 }).eq("id", d['id']).execute()
                                 st.success("Terima kasih atas ulasan Anda!")
                                 st.rerun()
-                            except Exception as e:
-                                st.error(f"Gagal kirim ulasan: {e}")
+                            except Exception as e: st.error(f"Gagal kirim ulasan: {e}")
                 else:
                     st.info("✅ Anda sudah memberikan ulasan untuk pesanan ini.")
                     st.markdown(f"**Rating:** {'⭐' * d['rating']}")
-                    if d.get('ulasan'):
-                        st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
+                    if d.get('ulasan'): st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
         else:
             st.error("Tidak ditemukan.")
