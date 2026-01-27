@@ -425,7 +425,7 @@ elif menu == "🛍️ Pesan Barang":
                     if "Transfer" in bayar:
                         st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai nominal total.")
                     elif "E-Wallet" in bayar:
-                        st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**")
+                        st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai nominal total.")
                     elif "Voucher" in bayar:
                         st.info("🎫 **Voucher Refund:** Upload foto Voucher / Bukti Saldo Anda di kolom upload di bawah.")
 
@@ -584,4 +584,5 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
         else:
             st.error("Tidak ditemukan.")
+
 
