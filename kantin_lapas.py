@@ -18,6 +18,34 @@ except:
     st.error("⚠️ Koneksi Database Gagal. Cek Secrets Anda.")
     st.stop()
 
+# --- SETTING JAM OPERASIONAL (WIB) ---
+# Tentukan jam buka dan tutup (Format 24 jam)
+JAM_BUKA = 7
+JAM_TUTUP = 17
+
+# Ambil waktu sekarang dalam WIB (UTC+7)
+waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
+jam_skrg = waktu_skrg_wib.hour
+
+# LOGIKA TUTUP TOKO
+# Jika jam sekarang KURANG DARI jam buka ATAU LEBIH DARI jam tutup
+if jam_skrg < JAM_BUKA or jam_skrg >= JAM_TUTUP:
+    st.markdown(f"""
+    <div style='text-align: center; padding: 50px;'>
+        <h1>🚫 MAAF, KANTIN TUTUP</h1>
+        <p style='font-size: 18px;'>
+            Layanan e-PAS Mart hanya beroperasi pada pukul: <br>
+            <b>{JAM_BUKA:02d}.00 - {JAM_TUTUP:02d}.00 WIB</b>
+        </p>
+        <div style='background-color: #ffebee; color: #c62828; padding: 15px; border-radius: 10px; margin-top: 20px;'>
+            Silakan kembali lagi besok pagi ya! 😊
+        </div>
+        <br>
+        <p style='font-size: 12px; color: gray;'>Waktu Server Saat Ini: {waktu_skrg_wib.strftime('%H:%M')} WIB</p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop() # <--- PERINTAH PENTING: Hentikan semua kode di bawah ini agar menu tidak muncul
+    
 st.set_page_config(page_title="e-PAS Mart", page_icon="🛍️", layout="wide")
 
 # --- TITIK JANGKAR SCROLL KE ATAS ---
@@ -584,5 +612,6 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
         else:
             st.error("Tidak ditemukan.")
+
 
 
