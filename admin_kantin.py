@@ -235,7 +235,7 @@ elif menu_admin == "📋 Daftar Pesanan":
             st.success(f"Ditemukan 1 pesanan untuk resi: {cari_resi}")
 
     # --- TABS PESANAN ---
-    tab1, tab2, tab3, tab4 = st.tabs(["📥 Pesanan Masuk", "📦 Sedang Diproses", "✅ Riwayat Selesai", "❌ Dibatalkan"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📥 Pesanan Masuk", "📦 Sedang Diproses", "✅ Riwayat Selesai", "❌ Dibatalkan User", "🚫 Ditolak Admin"])
 
     # FUNGSI RENDER KARTU PESANAN AGAR KODE LEBIH RAPI
     def render_pesanan(p_list, status_tab):
@@ -263,58 +263,66 @@ elif menu_admin == "📋 Daftar Pesanan":
                     st.write(f"**Penerima:** {p['untuk_siapa']}")
                     st.write(f"**Metode:** {p.get('cara_bayar', '-')}")
                     st.code(f"Isi: {p['item_pesanan']}")
+                    
+                    # Tampilkan status lengkap jika di tab Ditolak Admin
+                    if "Ditolak" in p.get('status', ''):
+                        st.error(f"Status: {p['status']}")
 
                 with cols[2]:
-                    with st.form(key=f"form_{p['id']}"):
-                        st.write("**Tindakan:**")
-                        opsi = ["Menunggu Verifikasi", "Pembayaran Valid (Diproses)", "Selesai"]
-                        
-                        # Set Default Index sesuai status sekarang
-                        try:
-                            idx = opsi.index(p['status'])
-                        except:
-                            idx = 0 
-                        
-                        st_baru = st.selectbox("Update Status", opsi, index=idx, key=f"s_{p['id']}")
-                        
-                        foto = None
-                        if st_baru == "Selesai":
-                            st.caption("📷 Foto penyerahan barang:")
-                            foto = st.camera_input("Ambil Foto", key=f"c_{p['id']}")
-                        
-                        btn_proses = st.form_submit_button("Simpan & Proses")
-                        
-                        if btn_proses:
-                            u_data = {"status": st_baru}
+                    # Jika di Tab Ditolak, tidak perlu tombol aksi
+                    if "Ditolak" in p.get('status', ''):
+                        st.info("ℹ️ Data ini telah diarsipkan sebagai bukti penolakan.")
+                    else:
+                        with st.form(key=f"form_{p['id']}"):
+                            st.write("**Tindakan:**")
+                            opsi = ["Menunggu Verifikasi", "Pembayaran Valid (Diproses)", "Selesai"]
                             
-                            # Logika simpan foto jika status selesai
+                            # Set Default Index sesuai status sekarang
+                            try:
+                                idx = opsi.index(p['status'])
+                            except:
+                                idx = 0 
+                            
+                            st_baru = st.selectbox("Update Status", opsi, index=idx, key=f"s_{p['id']}")
+                            
+                            foto = None
                             if st_baru == "Selesai":
-                                if foto:
-                                    f_name = f"serah_{p['no_resi'] if p.get('no_resi') else p['id']}"
-                                    url_foto = upload_ke_supabase(foto, "bukti_serah", f_name)
-                                    if url_foto:
-                                        u_data["foto_penerima"] = url_foto
-                                        supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
-                                        
-                                        # Kirim Link WA
-                                        no_hp = p.get('nomor_wa', '')
-                                        if no_hp and no_hp.startswith('0'): no_hp = '62' + no_hp[1:]
-                                        msg = f"Halo, Pesanan Resi {p.get('no_resi')} SUDAH DITERIMA oleh {p['untuk_siapa']}. Terima kasih."
-                                        link_wa = f"https://wa.me/{no_hp}?text={msg.replace(' ', '%20')}"
-                                        
-                                        st.success("✅ Pesanan Selesai!")
-                                        st.link_button("📲 Kabari via WA", link_wa)
-                                        time.sleep(2)
-                                        st.rerun()
+                                st.caption("📷 Foto penyerahan barang:")
+                                foto = st.camera_input("Ambil Foto", key=f"c_{p['id']}")
+                            
+                            btn_proses = st.form_submit_button("Simpan & Proses")
+                            
+                            if btn_proses:
+                                u_data = {"status": st_baru}
+                                
+                                # Logika simpan foto jika status selesai
+                                if st_baru == "Selesai":
+                                    if foto:
+                                        f_name = f"serah_{p['no_resi'] if p.get('no_resi') else p['id']}"
+                                        url_foto = upload_ke_supabase(foto, "bukti_serah", f_name)
+                                        if url_foto:
+                                            u_data["foto_penerima"] = url_foto
+                                            supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                                            
+                                            # Kirim Link WA
+                                            no_hp = p.get('nomor_wa', '')
+                                            if no_hp and no_hp.startswith('0'): no_hp = '62' + no_hp[1:]
+                                            msg = f"Halo, Pesanan Resi {p.get('no_resi')} SUDAH DITERIMA oleh {p['untuk_siapa']}. Terima kasih."
+                                            link_wa = f"https://wa.me/{no_hp}?text={msg.replace(' ', '%20')}"
+                                            
+                                            st.success("✅ Pesanan Selesai!")
+                                            st.link_button("📲 Kabari via WA", link_wa)
+                                            time.sleep(2)
+                                            st.rerun()
+                                        else:
+                                            st.error("Gagal upload foto.")
                                     else:
-                                        st.error("Gagal upload foto.")
+                                        st.error("⚠️ Foto penyerahan wajib diambil!")
                                 else:
-                                    st.error("⚠️ Foto penyerahan wajib diambil!")
-                            else:
-                                supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
-                                st.success(f"Status diubah: {st_baru}")
-                                time.sleep(1)
-                                st.rerun()
+                                    supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                                    st.success(f"Status diubah: {st_baru}")
+                                    time.sleep(1)
+                                    st.rerun()
 
     # --- LOGIKA ISI TAB ---
     
@@ -357,7 +365,7 @@ elif menu_admin == "📋 Daftar Pesanan":
                             st.info(f"Metode: {p.get('cara_bayar', '-')}")
                             st.code(f"Isi: {p['item_pesanan']}")
 
-                        # KOLOM 3: TINDAKAN ADMIN (VERSI EXPANDER - LEBIH STABIL)
+                        # KOLOM 3: TINDAKAN ADMIN (UPDATE: TOLAK PESANAN)
                         with cols[2]:
                             st.write("---")
                             st.write("**Keputusan:**")
@@ -371,18 +379,27 @@ elif menu_admin == "📋 Daftar Pesanan":
                             
                             st.write("") # Spasi sedikit
                             
-                            # 2. PENGAMAN HAPUS (Menu Lipat)
-                            # Tombol hapus sembunyi di dalam sini. Admin harus klik panah dulu baru bisa hapus.
-                            with st.expander("🗑️ Opsi Tolak / Hapus"):
-                                st.warning("⚠️ **Yakin hapus pesanan ini?**")
-                                st.caption("Data akan hilang permanen dan tidak bisa dikembalikan.")
+                            # 2. OPSI TOLAK PESANAN (EXPANDER)
+                            with st.expander("🚫 Tolak Pesanan (Backup Data)"):
+                                st.warning("Pesanan akan ditandai 'Ditolak' dan tetap tersimpan di database.")
                                 
-                                # Tombol Merah "Kill Switch"
-                                if st.button("🔥 YA, HAPUS SEKARANG", key=f"del_fix_{p['id']}", use_container_width=True):
-                                    supabase.table("pesanan").delete().eq("id", p['id']).execute()
-                                    st.error("Data berhasil dihapus.")
+                                alasan_list = [
+                                    "Bukti Transfer Palsu / Buram",
+                                    "Nominal Transfer Kurang",
+                                    "Stok Barang Habis",
+                                    "Data WBP Tidak Ditemukan",
+                                    "Indikasi Spam / Iseng"
+                                ]
+                                alasan_pilih = st.selectbox("Alasan Penolakan:", alasan_list, key=f"rsn_{p['id']}")
+                                
+                                if st.button("🚫 TOLAK PESANAN", key=f"deny_{p['id']}", type="secondary", use_container_width=True):
+                                    # Update status dengan format "Ditolak Admin: [Alasan]"
+                                    status_tolak = f"Ditolak Admin: {alasan_pilih}"
+                                    supabase.table("pesanan").update({"status": status_tolak}).eq("id", p['id']).execute()
+                                    st.error(f"Pesanan ditolak karena: {alasan_pilih}")
                                     time.sleep(1)
                                     st.rerun()
+
         # TAB 2: SEDANG DIPROSES
         with tab2:
             st.header("📦 Sedang Disiapkan / Diproses")
@@ -406,14 +423,13 @@ elif menu_admin == "📋 Daftar Pesanan":
             else:
                 st.info("Belum ada riwayat selesai.")
 
-      # TAB 4: RIWAYAT PEMBATALAN & CEK VOUCHER (ANTI-FRAUD)
+      # TAB 4: RIWAYAT PEMBATALAN (USER)
         with tab4:
-            st.header("🎫 Audit Keamanan Voucher")
+            st.header("🎫 Audit Keamanan Voucher (Batal User)")
             
             st.error("""
             🛑 **PENTING UNTUK ADMIN:**
             Sebelum menerima Voucher, **WAJIB CEK 'BUKTI TF ASLI'** di kolom kanan!
-            Jangan terima Voucher jika Pesanan Asalnya ternyata **struk palsu/sampah**, meskipun status Vouchernya Aktif.
             """)
             
             c_cek, c_info = st.columns([3, 1])
@@ -497,3 +513,14 @@ elif menu_admin == "📋 Daftar Pesanan":
                                 st.error("JANGAN TERIMA VOUCHER INI!")
                         
                         st.divider()
+
+        # TAB 5: RIWAYAT DITOLAK ADMIN (AUDIT IT) - FITUR BARU
+        with tab5:
+            st.header("🚫 Arsip Penolakan Admin")
+            st.info("Daftar pesanan yang ditolak oleh Admin (Data Backup).")
+            
+            # Ambil data yang statusnya mengandung kata "Ditolak Admin"
+            # Note: ilike adalah case-insensitive search
+            res_tolak = supabase.table("pesanan").select("*").ilike("status", "%Ditolak Admin%").order("id", desc=True).limit(50).execute()
+            
+            render_pesanan(res_tolak.data, "Arsip")
