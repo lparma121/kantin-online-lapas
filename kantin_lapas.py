@@ -19,16 +19,13 @@ except:
     st.stop()
 
 # --- SETTING JAM OPERASIONAL (WIB) ---
-# Tentukan jam buka dan tutup (Format 24 jam)
 JAM_BUKA = 7
 JAM_TUTUP = 17
 
-# Ambil waktu sekarang dalam WIB (UTC+7)
 waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
 jam_skrg = waktu_skrg_wib.hour
 
 # LOGIKA TUTUP TOKO
-# Jika jam sekarang KURANG DARI jam buka ATAU LEBIH DARI jam tutup
 if jam_skrg < JAM_BUKA or jam_skrg >= JAM_TUTUP:
     st.markdown(f"""
     <div style='text-align: center; padding: 50px;'>
@@ -44,8 +41,8 @@ if jam_skrg < JAM_BUKA or jam_skrg >= JAM_TUTUP:
         <p style='font-size: 12px; color: gray;'>Waktu Server Saat Ini: {waktu_skrg_wib.strftime('%H:%M')} WIB</p>
     </div>
     """, unsafe_allow_html=True)
-    st.stop() # <--- PERINTAH PENTING: Hentikan semua kode di bawah ini agar menu tidak muncul
-    
+    st.stop() 
+
 st.set_page_config(page_title="e-PAS Mart", page_icon="🛍️", layout="wide")
 
 # --- TITIK JANGKAR SCROLL KE ATAS ---
@@ -79,19 +76,6 @@ st.markdown("""
         border: 1px solid #eee; overflow: hidden;
     }
 
-    /* GRID 2 KOLOM DI HP */
-    @media (max-width: 640px) {
-        div[data-testid="column"] {
-            width: 50% !important; flex: 0 0 50% !important;
-            max-width: 50% !important; padding: 0 4px !important;
-        }
-        div[data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
-        .stButton > button {
-            font-size: 12px !important; padding: 4px 0 !important;
-            height: 30px !important; min-height: 30px !important;
-        }
-    }
-
     /* TEKS PRODUK */
     .info-box { padding: 8px; }
     .nama-produk { 
@@ -117,7 +101,7 @@ st.markdown("""
         background-color: #00AAFF !important; border: none !important;
     }
 
-    /* BACK TO TOP (GHOST MODE) */
+    /* BACK TO TOP */
     .back-to-top {
         position: fixed; bottom: 30px; right: 20px;
         width: 45px; height: 45px; border-radius: 50%;
@@ -185,7 +169,7 @@ def tampilkan_resi_copy_otomatis(resi_text):
     """
     components.html(html_code, height=100)
 
-# --- GENERATOR GAMBAR (WIB) ---
+# --- GENERATOR GAMBAR ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     width, height = 500, 700
     img = Image.new('RGB', (width, height), color='white')
@@ -216,8 +200,8 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
         y += 25
     d.line((20, y+10, 480, y+10), fill="black", width=2)
     y += 30
-    d.text((30, y), "TOTAL BAYAR", fill="black")
-    d.text((350, y), format_rupiah(total_bayar), fill=(200, 0, 0))
+    d.text((30, y), "TOTAL TRANSFER", fill="black")
+    d.text((350, y), format_rupiah(total_bayar), fill=(200, 0, 0)) # Total bayar ini sudah + kode unik
     y += 50
     d.text((120, y), "TERIMA KASIH ATAS KUNJUNGAN ANDA", fill="gray")
     buf = io.BytesIO()
@@ -242,8 +226,12 @@ def buat_voucher_image(nama, nominal, resi_asal):
 # --- SESSION STATE ---
 if 'keranjang' not in st.session_state: st.session_state.keranjang = []
 if 'nota_sukses' not in st.session_state: st.session_state.nota_sukses = None
+# Init Kode Unik jika belum ada
+if 'kode_unik' not in st.session_state: st.session_state.kode_unik = random.randint(101, 999)
 
-def reset_keranjang(): st.session_state.keranjang = []
+def reset_keranjang(): 
+    st.session_state.keranjang = []
+    st.session_state.kode_unik = random.randint(101, 999) # Reset kode unik juga
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -251,7 +239,7 @@ with st.sidebar:
     menu = st.sidebar.radio("Navigasi", ["🏠 Beranda", "🛍️ Pesan Barang", "🔍 Lacak Pesanan"])
 
 # =========================================
-# 1. BERANDA (UPDATED: ADA ULASAN)
+# 1. BERANDA
 # =========================================
 if menu == "🏠 Beranda":
     c_kiri, c_tengah, c_kanan = st.columns([0.1, 3, 0.1])
@@ -290,12 +278,11 @@ if menu == "🏠 Beranda":
             st.markdown("**Tercatat & Terpantau**")
             st.caption("Keluarga lebih tenang karena dana terpantau jelas penggunaannya.")
     
-    # --- FITUR BARU: MENAMPILKAN ULASAN TERBARU ---
+    # --- FITUR ULASAN TERBARU ---
     st.write("")
     st.write("")
     st.subheader("💬 Apa Kata Mereka?")
     
-    # Ambil 3 ulasan terbaru yang tidak kosong (rating tidak null)
     try:
         res_ulasan = supabase.table("pesanan").select("nama_pemesan, rating, ulasan").not_.is_("rating", "null").order("created_at", desc=True).limit(3).execute()
         
@@ -312,7 +299,6 @@ if menu == "🏠 Beranda":
                             st.caption("*Tanpa komentar*")
         else:
             st.caption("Belum ada ulasan. Jadilah yang pertama memberikan ulasan!")
-            
     except Exception as e:
         st.error("Gagal memuat ulasan.")
         
@@ -324,6 +310,7 @@ if menu == "🏠 Beranda":
 elif menu == "🛍️ Pesan Barang":
     st.markdown("<h2 style='margin-bottom:10px;'>🛍️ Etalase</h2>", unsafe_allow_html=True)
 
+    # Hitung total murni barang
     total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
     total_qty = sum(item['qty'] for item in st.session_state.keranjang)
 
@@ -341,7 +328,7 @@ elif menu == "🛍️ Pesan Barang":
                         del st.session_state.keranjang[i]
                         st.rerun()
             st.divider()
-            st.markdown(f"#### Total: {format_rupiah(total_duit)}")
+            st.markdown(f"#### Total Barang: {format_rupiah(total_duit)}")
             if st.button("💳 Lanjut Pembayaran", type="primary", use_container_width=True):
                  st.toast("Silakan klik Tab 'Pembayaran'", icon="✅")
 
@@ -403,9 +390,9 @@ elif menu == "🛍️ Pesan Barang":
         else:
             st.info("Barang habis.")
 
-    # === TAB 2: PEMBAYARAN ===
+    # === TAB 2: PEMBAYARAN (DENGAN KODE UNIK) ===
     with tab_checkout:
-        st.header("📝 Konfirmasi")
+        st.header("📝 Konfirmasi & Pembayaran")
         
         # LOGIKA TAMPILAN: JIKA SUKSES -> NOTA | JIKA BELUM -> FORM
         if st.session_state.nota_sukses:
@@ -413,9 +400,7 @@ elif menu == "🛍️ Pesan Barang":
             res_data = st.session_state.nota_sukses
             st.success("✅ Pesanan Berhasil Dikirim!")
             
-            # --- FITUR KHUSUS: KOTAK COPY OTOMATIS (JS) ---
             tampilkan_resi_copy_otomatis(res_data['resi'])
-            # ----------------------------------------------
             
             b64 = image_to_base64(res_data['data'])
             st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:250px; border:1px solid #ddd; margin-bottom:10px;">', unsafe_allow_html=True)
@@ -441,19 +426,44 @@ elif menu == "🛍️ Pesan Barang":
             if not st.session_state.keranjang:
                 st.info("Keranjang kosong.")
             else:
+                # HITUNG KODE UNIK
+                total_barang = total_duit # Dari perhitungan di atas
+                
+                # Cek session kode unik
+                if 'kode_unik' not in st.session_state:
+                    st.session_state.kode_unik = random.randint(101, 999)
+                
+                total_bayar_final = total_barang + st.session_state.kode_unik
+
                 with st.container(border=True):
                     st.write("**Item:**")
                     for x in st.session_state.keranjang:
                         st.write(f"• {x['qty']}x {x['nama']} ({format_rupiah(x['harga']*x['qty'])})")
+                    
                     st.divider()
-                    st.markdown(f"### Total: {format_rupiah(total_duit)}")
+                    
+                    # --- TAMPILAN TOTAL DENGAN KODE UNIK (MENCOLOK) ---
+                    st.markdown(f"""
+                    <div style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 1px solid #90caf9; text-align: center;">
+                        <p style="margin:0; color: #555;">Harga Barang: {format_rupiah(total_barang)}</p>
+                        <p style="margin:0; color: #555;">Kode Unik: <b style="color:red;">+{st.session_state.kode_unik}</b></p>
+                        <hr style="margin: 10px 0;">
+                        <h3 style="margin:0; color: #00AAFF;">TOTAL TRANSFER:</h3>
+                        <h2 style="margin:0; color: #000;">{format_rupiah(total_bayar_final)}</h2>
+                        <p style="font-size: 12px; color: red; margin-top: 5px;">
+                            ⚠️ <b>PENTING:</b> Mohon transfer <b>TEPAT</b> sampai 3 digit terakhir<br>
+                            agar pesanan dapat diverifikasi dengan cepat.
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    # ----------------------------------------------------
+
                     bayar = st.selectbox("Metode Bayar", ["Transfer Bank", "E-Wallet", "🎫 Voucher / Saldo Refund"])
                     
-                    # --- TEMPELKAN KODE ANDA DI SINI (Ganti kode if/else yang lama) ---
                     if "Transfer" in bayar:
-                        st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai nominal total.")
+                        st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
                     elif "E-Wallet" in bayar:
-                        st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai nominal total.")
+                        st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
                     elif "Voucher" in bayar:
                         st.info("🎫 **Voucher Refund:** Upload foto Voucher / Bukti Saldo Anda di kolom upload di bawah.")
 
@@ -478,13 +488,12 @@ elif menu == "🛍️ Pesan Barang":
                                     if url:
                                         items_str = ", ".join([f"{x['qty']}x {x['nama']}" for x in st.session_state.keranjang])
                                         resi = generate_resi()
-                                        
-                                        # PERBAIKAN: PAKSA KIRIM WAKTU DARI PYTHON
                                         waktu_sekarang_iso = datetime.now(timezone.utc).isoformat()
                                         
                                         data = {
                                             "nama_pemesan": pemesan, "untuk_siapa": untuk, "nomor_wa": wa,
-                                            "item_pesanan": items_str, "total_harga": total_duit,
+                                            "item_pesanan": items_str, 
+                                            "total_harga": total_bayar_final, # SIMPAN TOTAL FINAL (PLUS KODE UNIK)
                                             "bukti_transfer": url, "status": "Menunggu Verifikasi",
                                             "cara_bayar": bayar, "no_resi": resi,
                                             "created_at": waktu_sekarang_iso
@@ -496,9 +505,11 @@ elif menu == "🛍️ Pesan Barang":
                                             if curr.data:
                                                 supabase.table("barang").update({"stok": curr.data[0]['stok'] - x['qty']}).eq("nama_barang", x['nama']).execute()
 
-                                        nota = buat_struk_image(data, st.session_state.keranjang, total_duit, resi)
+                                        # Generate nota pakai total final
+                                        nota = buat_struk_image(data, st.session_state.keranjang, total_bayar_final, resi)
                                         st.session_state.nota_sukses = { 'data': nota, 'resi': resi }
-                                        reset_keranjang()
+                                        
+                                        reset_keranjang() # Ini akan reset kode unik juga untuk pesanan berikutnya
                                         st.rerun()
                                     else: st.error("Gagal upload.")
                                 except Exception as e: st.error(f"Error: {e}")
@@ -518,7 +529,7 @@ elif menu == "🛍️ Pesan Barang":
                     show_cart_modal()
 
 # =========================================
-# 3. LACAK PESANAN (RATING & KOMENTAR)
+# 3. LACAK PESANAN
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
@@ -612,6 +623,3 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
         else:
             st.error("Tidak ditemukan.")
-
-
-
