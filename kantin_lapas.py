@@ -76,6 +76,19 @@ st.markdown("""
         border: 1px solid #eee; overflow: hidden;
     }
 
+    /* GRID 2 KOLOM DI HP */
+    @media (max-width: 640px) {
+        div[data-testid="column"] {
+            width: 50% !important; flex: 0 0 50% !important;
+            max-width: 50% !important; padding: 0 4px !important;
+        }
+        div[data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
+        .stButton > button {
+            font-size: 12px !important; padding: 4px 0 !important;
+            height: 30px !important; min-height: 30px !important;
+        }
+    }
+
     /* TEKS PRODUK */
     .info-box { padding: 8px; }
     .nama-produk { 
@@ -169,6 +182,43 @@ def tampilkan_resi_copy_otomatis(resi_text):
     """
     components.html(html_code, height=100)
 
+# --- FUNGSI BARU: KOTAK TOTAL TRANSFER BISA DI-COPY (JS) ---
+def tampilkan_total_copy_otomatis(total_rp, total_raw, kode_unik):
+    html_code = f"""
+    <div onclick="salinNominal()" style="
+        background-color: #e3f2fd; 
+        padding: 15px; 
+        border-radius: 10px; 
+        border: 2px dashed #00AAFF; 
+        text-align: center; 
+        cursor: pointer;
+        transition: 0.2s;
+        margin-bottom: 20px;
+    " onmouseover="this.style.backgroundColor='#bbdefb'" onmouseout="this.style.backgroundColor='#e3f2fd'">
+        
+        <p style="margin:0; color: #555; font-size: 13px;">Total Belanja + Kode Unik (<b style="color:red">{kode_unik}</b>)</p>
+        <h3 style="margin:5px 0; color: #00AAFF;">TOTAL TRANSFER:</h3>
+        
+        <h2 style="margin:0; color: #000; font-family: sans-serif;">{total_rp} <span style="font-size:16px">📋</span></h2>
+        
+        <div style="font-size: 11px; color: #00AAFF; font-weight:bold; margin-top:5px;">[KLIK UNTUK SALIN NOMINAL]</div>
+        <div id="notif_nominal" style="font-size: 11px; color: green; height: 15px; margin-top:2px;"></div>
+    </div>
+
+    <script>
+    function salinNominal() {{
+        // Menyalin angka murni (tanpa Rp dan titik)
+        navigator.clipboard.writeText("{total_raw}");
+        
+        document.getElementById("notif_nominal").innerHTML = "✅ Nominal {total_raw} berhasil disalin!";
+        setTimeout(function() {{
+            document.getElementById("notif_nominal").innerHTML = "";
+        }}, 3000);
+    }}
+    </script>
+    """
+    components.html(html_code, height=160)
+
 # --- GENERATOR GAMBAR ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     width, height = 500, 700
@@ -226,7 +276,7 @@ def buat_voucher_image(nama, nominal, resi_asal):
 # --- SESSION STATE ---
 if 'keranjang' not in st.session_state: st.session_state.keranjang = []
 if 'nota_sukses' not in st.session_state: st.session_state.nota_sukses = None
-# Init Kode Unik jika belum ada
+# Init Kode Unik jika belum ada (101 - 999)
 if 'kode_unik' not in st.session_state: st.session_state.kode_unik = random.randint(101, 999)
 
 def reset_keranjang(): 
@@ -390,7 +440,7 @@ elif menu == "🛍️ Pesan Barang":
         else:
             st.info("Barang habis.")
 
-    # === TAB 2: PEMBAYARAN (DENGAN KODE UNIK) ===
+    # === TAB 2: PEMBAYARAN (DENGAN KODE UNIK & COPY) ===
     with tab_checkout:
         st.header("📝 Konfirmasi & Pembayaran")
         
@@ -442,20 +492,16 @@ elif menu == "🛍️ Pesan Barang":
                     
                     st.divider()
                     
-                    # --- TAMPILAN TOTAL DENGAN KODE UNIK (MENCOLOK) ---
-                    st.markdown(f"""
-                    <div style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 1px solid #90caf9; text-align: center;">
-                        <p style="margin:0; color: #555;">Harga Barang: {format_rupiah(total_barang)}</p>
-                        <p style="margin:0; color: #555;">Kode Unik: <b style="color:red;">+{st.session_state.kode_unik}</b></p>
-                        <hr style="margin: 10px 0;">
-                        <h3 style="margin:0; color: #00AAFF;">TOTAL TRANSFER:</h3>
-                        <h2 style="margin:0; color: #000;">{format_rupiah(total_bayar_final)}</h2>
-                        <p style="font-size: 12px; color: red; margin-top: 5px;">
-                            ⚠️ <b>PENTING:</b> Mohon transfer <b>TEPAT</b> sampai 3 digit terakhir<br>
-                            agar pesanan dapat diverifikasi dengan cepat.
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    # --- TAMPILAN TOTAL DENGAN FITUR COPY (JS) ---
+                    angka_murni = str(total_bayar_final) 
+                    
+                    tampilkan_total_copy_otomatis(
+                        format_rupiah(total_bayar_final), # Tampilan (Rp 50.123)
+                        angka_murni,                      # Yang disalin (50123)
+                        st.session_state.kode_unik
+                    )
+                    
+                    st.caption("⚠️ **PENTING:** Mohon transfer **TEPAT** sampai 3 digit terakhir agar pesanan dapat diverifikasi dengan cepat.")
                     # ----------------------------------------------------
 
                     bayar = st.selectbox("Metode Bayar", ["Transfer Bank", "E-Wallet", "🎫 Voucher / Saldo Refund"])
