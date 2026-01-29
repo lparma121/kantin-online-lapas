@@ -221,7 +221,8 @@ def tampilkan_total_copy_otomatis(total_rp, total_raw, kode_unik):
 
 # --- GENERATOR GAMBAR (WIB) ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
-    width, height = 500, 700
+    # Tambahkan margin padding agar teks tidak terlalu mepet ke pinggir
+    width, height = 500, 800 # Tambah tinggi sedikit
     img = Image.new('RGB', (width, height), color='white')
     d = ImageDraw.Draw(img)
     try: font_header = ImageFont.load_default() 
@@ -679,5 +680,6 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
+
 
 
