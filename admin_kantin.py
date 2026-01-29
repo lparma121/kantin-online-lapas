@@ -215,10 +215,10 @@ if menu_admin == "📦 Manajemen Menu":
 elif menu_admin == "📋 Daftar Pesanan":
     st.title("📋 Verifikasi & Proses Pesanan")
     
-    # --- FITUR PENCARIAN RESI ---
+    # --- FITUR PENCARIAN RESI (UPDATE: BISA 4 DIGIT) ---
     c_search, c_btn = st.columns([3, 1])
     with c_search:
-        cari_resi = st.text_input("🔍 Cari Nomor Resi", placeholder="Ketik nomor resi...")
+        cari_resi = st.text_input("🔍 Cari Nomor Resi", placeholder="Ketik Resi Lengkap atau 4 Digit Terakhir (Contoh: RK88)...")
     with c_btn:
         st.write("") # Spasi
         st.write("") 
@@ -227,12 +227,15 @@ elif menu_admin == "📋 Daftar Pesanan":
 
     filter_data = None
     if cari_resi:
-        res = supabase.table("pesanan").select("*").eq("no_resi", cari_resi).execute()
+        # LOGIKA PENCARIAN BARU (ILIKE dengan wildcard %)
+        keyword = cari_resi.strip()
+        res = supabase.table("pesanan").select("*").ilike("no_resi", f"%{keyword}").execute()
         filter_data = res.data
+        
         if not filter_data:
-            st.error(f"Resi '{cari_resi}' tidak ditemukan.")
+            st.error(f"Resi dengan kata kunci '{keyword}' tidak ditemukan.")
         else:
-            st.success(f"Ditemukan 1 pesanan untuk resi: {cari_resi}")
+            st.success(f"Ditemukan {len(filter_data)} pesanan.")
 
     # --- TABS PESANAN ---
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📥 Pesanan Masuk", "📦 Sedang Diproses", "✅ Riwayat Selesai", "❌ Dibatalkan User", "🚫 Ditolak Admin"])
@@ -385,9 +388,6 @@ elif menu_admin == "📋 Daftar Pesanan":
                                 
                                 alasan_list = [
                                     "Bukti Transfer Palsu / Buram",
-                                    "Nominal Transfer Kurang",
-                                    "Stok Barang Habis",
-                                    "Data WBP Tidak Ditemukan",
                                     "Indikasi Spam / Iseng"
                                 ]
                                 alasan_pilih = st.selectbox("Alasan Penolakan:", alasan_list, key=f"rsn_{p['id']}")
