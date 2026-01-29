@@ -364,22 +364,36 @@ elif menu == "🛍️ Pesan Barang":
         st.header("📝 Konfirmasi & Pembayaran")
         
         if st.session_state.nota_sukses:
+            # LOGIKA TAMPILAN: JIKA SUKSES -> NOTA | JIKA BELUM -> FORM
+        if st.session_state.nota_sukses:
             # --- TAMPILAN SUKSES ---
             res_data = st.session_state.nota_sukses
+            
             st.success("✅ Pesanan Berhasil Dikirim!")
+            
+            # 1. Tampilkan Resi dengan Tombol Salin (Tanpa Gambar)
             tampilkan_copy_text(res_data['resi'], "NOMOR RESI")
             
-            b64 = image_to_base64(res_data['data'])
-            st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:250px; border:1px solid #ddd; margin-bottom:10px;">', unsafe_allow_html=True)
+            st.write("") # Memberi sedikit jarak
             
+            # 2. Tombol Aksi (Download & Belanja Lagi)
             c_dl, c_new = st.columns(2)
             with c_dl:
-                st.download_button("📥 Download Nota", res_data['data'], f"{res_data['resi']}.jpg", "image/jpeg", "primary", use_container_width=True)
+                # Tombol Download Nota tetap ada (penting untuk bukti)
+                st.download_button(
+                    label="📥 Simpan Nota",
+                    data=res_data['data'],
+                    file_name=f"{res_data['resi']}.jpg",
+                    mime="image/jpeg",
+                    type="primary",
+                    use_container_width=True
+                )
             with c_new:
                 if st.button("🔄 Belanja Lagi", use_container_width=True):
                     st.session_state.nota_sukses = None
                     st.rerun()
-            st.info("Simpan resi ini untuk melacak status pesanan.")
+            
+            st.info("Mohon simpan resi ini untuk melacak status pesanan Anda.")
             
         else:
             if not st.session_state.keranjang:
@@ -661,4 +675,5 @@ if total_duit > 0:
         with c_float_2:
             if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                 show_cart_modal()
+
 
