@@ -544,10 +544,13 @@ elif menu == "🛍️ Pesan Barang":
                                         }
                                         supabase.table("pesanan").insert(data).execute()
                                         
-                                        for x in st.session_state.keranjang:
-                                            curr = supabase.table("barang").select("stok").eq("nama_barang", x['nama']).execute()
-                                            if curr.data:
-                                                supabase.table("barang").update({"stok": curr.data[0]['stok'] - x['qty']}).eq("nama_barang", x['nama']).execute()
+                                       # GANTI BAGIAN INI DI KODE KAMU:
+                                       for x in st.session_state.keranjang:
+                                           try:
+                                           supabase.rpc("kurangi_stok_barang", {"row_id": x['id'], "jumlah_kurangi": x['qty']}).execute()
+                                           except Exception as e:
+                                           st.error(f"Gagal memproses item {x['nama']}: {e}")
+                                           st.stop() # Hentikan jika salah satu stok habis mendadak
 
                                         nota = buat_struk_image(data, st.session_state.keranjang, total_bayar_final, resi)
                                         st.session_state.nota_sukses = { 'data': nota, 'resi': resi }
@@ -679,5 +682,6 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
+
 
 
