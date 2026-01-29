@@ -316,7 +316,8 @@ elif menu_admin == "📋 Daftar Pesanan":
                                             st.success("✅ Pesanan Selesai!")
                                             st.link_button("📲 Kabari via WA", link_wa)
                                             time.sleep(2)
-                                       else:
+                                       
+                                    else:
                                             st.error("Gagal upload foto.")
                                     else:
                                         st.error("⚠️ Foto penyerahan wajib diambil!")
