@@ -200,13 +200,24 @@ elif menu == "🛍️ Pesan Barang":
             for i, item in enumerate(res_b.data):
                 with cols[i % 2]:
                     with st.container(border=True):
-                        st.image(item.get('gambar_url', "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"), use_container_width=True)
+                        # --- PERBAIKAN DI SINI ---
+                        # Pastikan URL gambar ada dan valid, jika tidak pakai gambar default
+                        url_gambar = item.get('gambar_url')
+                        if not url_gambar or url_gambar == "":
+                            url_gambar = "https://cdn-icons-png.flaticon.com/512/2515/2515263.png"
+                        
+                        try:
+                            st.image(url_gambar, use_container_width=True)
+                        except:
+                            # Jika URL-nya rusak/error saat dimuat, tampilkan placeholder
+                            st.image("https://cdn-icons-png.flaticon.com/512/2515/2515263.png", use_container_width=True)
+                        # -------------------------
+
                         st.markdown(f"<div class='nama-produk'>{item['nama_barang']}</div><div class='harga-produk'>{format_rupiah(item['harga'])}</div>", unsafe_allow_html=True)
                         if st.button("Tambah +", key=f"add_{item['id']}", use_container_width=True):
                             st.session_state.keranjang.append({"id": item['id'], "nama": item['nama_barang'], "harga": item['harga'], "qty": 1})
                             st.toast(f"{item['nama_barang']} ditambah!")
                             st.rerun()
-
     # === TAB 2: PEMBAYARAN (VOUCHER REFUND OTOMATIS) ===
     with tab_checkout:
         st.header("📝 Konfirmasi & Pembayaran")
@@ -386,3 +397,4 @@ if total_duit > 0:
         c_f1, c_f2 = st.columns([1.5, 1])
         c_f1.write(f"Total: {format_rupiah(total_duit)}")
         if c_f2.button("🛒 Lihat Troli", type="primary"): st.rerun()
+
