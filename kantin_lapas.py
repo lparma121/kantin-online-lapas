@@ -485,8 +485,14 @@ elif menu == "🛍️ Pesan Barang":
                     if total_transfer > 0:
                         st.write("---")
                         metode = st.selectbox("Metode Transfer Sisa", ["Transfer Bank (BRI)", "E-Wallet (DANA)"])
-                        if "BRI" in metode: st.warning("🏦 **BRI: 1234-5678-900 (Koperasi)**")
-                        if "DANA" in metode: st.warning("📱 **DANA: 0812-3456-7890**")
+                        
+                        # LOGIKA PERBAIKAN: Gunakan if-else
+                        if "BRI" in metode:
+                            st.warning("🏦 **BRI: 1234-5678-900 (Koperasi)**")
+                        else:
+                            # Jika bukan BRI (berarti DANA), tampilkan ini:
+                            st.warning("📱 **DANA: 0812-3456-7890**")
+                            
                         bukti = st.file_uploader("Upload Bukti Transfer Sisa", type=['jpg','png'])
                     else:
                         metode = "Full Voucher"
@@ -673,5 +679,6 @@ if total_duit > 0:
         with c_float_2:
             if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                 show_cart_modal()
+
 
 
