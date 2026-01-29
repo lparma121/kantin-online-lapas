@@ -263,16 +263,52 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     return buf.getvalue()
 
 def buat_voucher_image(nama, nominal, resi_asal):
-    width, height = 600, 300
-    img = Image.new('RGB', (width, height), color='#f0f8ff') 
+    width, height = 650, 350
+    # Warna background soft blue/gelas
+    img = Image.new('RGB', (width, height), color='#FFFFFF') 
     d = ImageDraw.Draw(img)
-    biru_tua = (0, 85, 255)
-    d.rectangle([(10, 10), (width-10, height-10)], outline=biru_tua, width=5)
-    d.text((40, 30), "VOUCHER PENGEMBALIAN DANA", fill=biru_tua)
-    d.text((40, 120), f"Kepada: {nama}", fill="black")
-    d.text((300, 120), "Senilai:", fill="black")
-    d.text((300, 145), format_rupiah(nominal), fill=(220, 20, 60))
-    d.text((400, 220), f"REF-{resi_asal}", fill=biru_tua)
+    
+    biru_tua = (0, 51, 153)
+    biru_muda = (235, 245, 255)
+    merah_aksen = (220, 20, 60)
+
+    # 1. Background & Border
+    d.rectangle([(0, 0), (width, height)], fill=biru_muda) # Background luar
+    d.rectangle([(20, 20), (width-20, height-20)], outline=biru_tua, width=3) # Border utama
+    d.rectangle([(30, 30), (width-30, height-30)], outline=biru_tua, width=1) # Border dalam halus
+
+    # 2. Header Section
+    d.rectangle([(31, 31), (width-31, 80)], fill=biru_tua) # Bar judul
+    d.text((180, 45), "VOUCHER PENGEMBALIAN DANA (REFUND)", fill="white")
+    d.text((230, 62), "e-PAS Mart Lapas Arga Makmur", fill="#ADD8E6")
+
+    # 3. Body Content
+    y_body = 110
+    d.text((60, y_body), "Diberikan Kepada :", fill="gray")
+    d.text((60, y_body + 25), f"{nama.upper()}", fill="black") # Nama pemesan Bold-ish
+    
+    d.text((60, y_body + 70), "Nilai Refund :", fill="gray")
+    # Teks Nominal Besar
+    nominal_teks = format_rupiah(nominal)
+    d.text((60, y_body + 95), nominal_teks, fill=merah_aksen)
+
+    # 4. Keamanan & Referensi (Sisi Kanan)
+    d.line((400, 110, 400, 250), fill=biru_tua, width=1) # Garis pemisah vertikal
+    
+    d.text((420, 110), "KODE REFERENSI:", fill="gray")
+    d.text((420, 130), f"REF-{resi_asal}", fill="black")
+    
+    d.text((420, 170), "TANGGAL TERBIT:", fill="gray")
+    d.text((420, 190), datetime.now(timezone.utc).strftime('%d/%m/%Y'), fill="black")
+
+    # 5. Instruksi Penggunaan (Footer)
+    d.rectangle([(31, 270), (width-31, 319)], fill="#F0F0F0")
+    instruksi = "CARA PAKAI: Upload foto voucher ini pada menu 'Metode Bayar' saat pesanan berikutnya.\nStatus: Berlaku sebagai saldo tunai di e-PAS Mart."
+    d.text((50, 280), instruksi, fill="#333333")
+
+    # 6. Watermark Digital (Mencegah duplikasi gampang)
+    d.text((500, 325), "OFFICIAL DIGITAL TICKET", fill="#D3D3D3")
+
     buf = io.BytesIO()
     img.save(buf, format='JPEG', quality=95)
     return buf.getvalue()
@@ -683,6 +719,7 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
+
 
 
 
