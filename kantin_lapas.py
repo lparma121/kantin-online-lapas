@@ -469,12 +469,16 @@ elif menu == "🛍️ Pesan Barang":
                     st.write("---")
                     
                     # [FIX] Selectbox ditaruh DI LUAR st.form agar bisa refresh otomatis
-                    metode_bayar = st.selectbox("Pilih Metode Transfer Sisa", ["Transfer Bank (BRI/BNI/BCA)", "E-Wallet (DANA/OVO/GoPay)"])
+                    metode_bayar = st.selectbox("Pilih Metode Transfer Sisa", ["Transfer Bank (BRI)", "DANA", "OVO", "GoPay"])
                     
                     if "BRI" in metode_bayar:
-                        st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\n🏦 **BNI: 1234-5678-900 (Koperasi Lapas)**\n\n🏦 **BCA: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                        st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
                     else:
-                        st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\n📱 **OVO: 0812-3456-7890 (Admin Kantin)**\n\n📱 **GoPay: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                        st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    else:
+                        st.warning("📱 **OVO: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    else:
+                        st.warning("📱 **GoPay: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
                 else:
                     st.markdown("""
                     <div style="background-color:#e8f5e9; padding:15px; border-radius:10px; text-align:center; border:1px solid green;">
@@ -674,6 +678,7 @@ if total_duit > 0:
         with c_float_2:
             if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                 show_cart_modal()
+
 
 
 
