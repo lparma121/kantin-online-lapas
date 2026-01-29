@@ -401,9 +401,9 @@ elif menu == "🛍️ Pesan Barang":
             if not st.session_state.keranjang:
                 st.info("Keranjang kosong.")
             else:
-                # ==========================================
-                # LOGIKA PERHITUNGAN VOUCHER
-                # ==========================================
+                # ------------------------------------------
+                # 1. LOGIKA VOUCHER & TOTAL
+                # ------------------------------------------
                 nominal_potongan = 0
                 sisa_tagihan = total_duit
                 
@@ -424,7 +424,6 @@ elif menu == "🛍️ Pesan Barang":
                             else:
                                 st.error("Kode Voucher Salah / Sudah Habis")
 
-                    # Jika Voucher Terpasang
                     if st.session_state.voucher_aktif:
                         v = st.session_state.voucher_aktif
                         saldo_voucher = v['nominal']
@@ -433,7 +432,7 @@ elif menu == "🛍️ Pesan Barang":
                         
                         if saldo_voucher >= total_duit:
                             nominal_potongan = total_duit
-                            sisa_tagihan = 0 # Lunas pakai voucher
+                            sisa_tagihan = 0 
                         else:
                             nominal_potongan = saldo_voucher
                             sisa_tagihan = total_duit - saldo_voucher
@@ -442,12 +441,12 @@ elif menu == "🛍️ Pesan Barang":
                             st.session_state.voucher_aktif = None
                             st.rerun()
 
-                # Hitung Kode Unik (Hanya jika ada sisa tagihan transfer)
+                # Hitung Kode Unik
                 if sisa_tagihan > 0:
                     if 'kode_unik' not in st.session_state: st.session_state.kode_unik = random.randint(101, 999)
                     total_transfer = sisa_tagihan + st.session_state.kode_unik
                 else:
-                    total_transfer = 0 # Tidak perlu transfer
+                    total_transfer = 0 
 
                 st.divider()
                 st.write("**Rincian Pembayaran:**")
@@ -457,17 +456,25 @@ elif menu == "🛍️ Pesan Barang":
                 if nominal_potongan > 0:
                     c1.write(f"Potongan Voucher: -{format_rupiah(nominal_potongan)}")
                 
+                # ------------------------------------------
+                # 2. PILIH METODE BAYAR (DI LUAR FORM AGAR INTERAKTIF)
+                # ------------------------------------------
+                metode_bayar = "Full Voucher" # Default jika lunas
+                
                 if total_transfer > 0:
                     c1.write(f"Kode Unik: +{st.session_state.kode_unik}")
+                    tampilkan_total_copy_otomatis(format_rupiah(total_transfer), str(total_transfer), st.session_state.kode_unik)
                     
-                    # Tampilkan Total Transfer yg bisa dicopy
-                    tampilkan_total_copy_otomatis(
-                        format_rupiah(total_transfer), # Tampilan
-                        str(total_transfer),           # Yang disalin
-                        st.session_state.kode_unik
-                    )
+                    st.caption("⚠️ **PENTING:** Mohon transfer **TEPAT** sampai 3 digit terakhir.")
+                    st.write("---")
                     
-                    st.caption("⚠️ **PENTING:** Mohon transfer **TEPAT** sampai 3 digit terakhir agar pesanan dapat diverifikasi dengan cepat.")
+                    # [FIX] Selectbox ditaruh DI LUAR st.form agar bisa refresh otomatis
+                    metode_bayar = st.selectbox("Pilih Metode Transfer Sisa", ["Transfer Bank (BRI)", "E-Wallet (DANA)"])
+                    
+                    if "BRI" in metode_bayar:
+                        st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    else:
+                        st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
                 else:
                     st.markdown("""
                     <div style="background-color:#e8f5e9; padding:15px; border-radius:10px; text-align:center; border:1px solid green;">
@@ -476,27 +483,17 @@ elif menu == "🛍️ Pesan Barang":
                     </div>
                     """, unsafe_allow_html=True)
 
-                # Form & Tombol Bayar
+                # ------------------------------------------
+                # 3. FORM IDENTITAS & SUBMIT
+                # ------------------------------------------
                 with st.form("checkout"):
                     pemesan = st.text_input("Nama Pengirim")
                     untuk = st.text_input("Nama WBP + Bin/Binti", placeholder="Contoh: Ali bin Abu")
                     wa = st.text_input("WhatsApp")
                     
+                    bukti = None
                     if total_transfer > 0:
-                        st.write("---")
-                        metode = st.selectbox("Metode Transfer Sisa", ["Transfer Bank (BRI)", "E-Wallet (DANA)"])
-                        
-                        # LOGIKA PERBAIKAN: Gunakan if-else
-                        if "BRI" in metode:
-                            st.warning("🏦 **BRI: 1234-5678-900 (Koperasi)**")
-                        else:
-                            # Jika bukan BRI (berarti DANA), tampilkan ini:
-                            st.warning("📱 **DANA: 0812-3456-7890**")
-                            
-                        bukti = st.file_uploader("Upload Bukti Transfer Sisa", type=['jpg','png'])
-                    else:
-                        metode = "Full Voucher"
-                        bukti = None # Tidak butuh bukti jika full voucher
+                        bukti = st.file_uploader("Upload Bukti Transfer Sisa", type=['jpg','png'], key="bukti_fix")
 
                     if st.form_submit_button("✅ Proses Pesanan Sekarang", type="primary"):
                         if not (pemesan and untuk and wa):
@@ -515,27 +512,26 @@ elif menu == "🛍️ Pesan Barang":
                                 resi = generate_resi()
                                 waktu_sekarang_iso = datetime.now(timezone.utc).isoformat()
                                 
-                                # Data Insert Pesanan
+                                # Data Insert
                                 data_insert = {
                                     "nama_pemesan": pemesan, "untuk_siapa": untuk, "nomor_wa": wa,
                                     "item_pesanan": items_str, 
-                                    "total_harga": total_transfer if total_transfer > 0 else 0, # Uang real masuk
+                                    "total_harga": total_transfer if total_transfer > 0 else 0, 
                                     "bukti_transfer": url_bukti, "status": "Menunggu Verifikasi",
-                                    "cara_bayar": metode, "no_resi": resi,
+                                    "cara_bayar": metode_bayar, "no_resi": resi,
                                     "created_at": waktu_sekarang_iso,
-                                    # Data Voucher
                                     "voucher_used": st.session_state.voucher_aktif['kode_voucher'] if st.session_state.voucher_aktif else None,
                                     "potongan_voucher": nominal_potongan
                                 }
                                 supabase.table("pesanan").insert(data_insert).execute()
                                 
-                                # Update Stok Barang
+                                # Update Stok
                                 for x in st.session_state.keranjang:
                                     curr = supabase.table("barang").select("stok").eq("nama_barang", x['nama']).execute()
                                     if curr.data:
                                         supabase.table("barang").update({"stok": curr.data[0]['stok'] - x['qty']}).eq("nama_barang", x['nama']).execute()
 
-                                # Update Saldo Voucher (KURANGI SALDO)
+                                # Update Saldo Voucher
                                 if st.session_state.voucher_aktif:
                                     kode_v = st.session_state.voucher_aktif['kode_voucher']
                                     sisa_saldo_baru = st.session_state.voucher_aktif['nominal'] - nominal_potongan
@@ -553,7 +549,6 @@ elif menu == "🛍️ Pesan Barang":
 
                             except Exception as e:
                                 st.error(f"Error Sistem: {e}")
-
 # =========================================
 # 3. LACAK PESANAN (UPDATE: REFUND OTOMATIS)
 # =========================================
@@ -679,6 +674,7 @@ if total_duit > 0:
         with c_float_2:
             if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                 show_cart_modal()
+
 
 
 
