@@ -377,7 +377,6 @@ elif menu == "🛍️ Pesan Barang":
                     c2.caption(f"{item['qty']} x {format_rupiah(item['harga'])}")
                     if c3.button("🗑️", key=f"del_m_{i}"):
                         del st.session_state.keranjang[i]
-                        st.rerun()
             st.divider()
             st.markdown(f"#### Total Barang: {format_rupiah(total_duit)}")
             if st.button("💳 Lanjut Pembayaran", type="primary", use_container_width=True):
@@ -680,4 +679,5 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
+
 
