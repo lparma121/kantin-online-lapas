@@ -20,7 +20,7 @@ except:
 
 # --- SETTING JAM OPERASIONAL (WIB) ---
 JAM_BUKA = 7
-JAM_TUTUP = 22
+JAM_TUTUP = 17
 
 waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
 jam_skrg = waktu_skrg_wib.hour
@@ -147,42 +147,21 @@ def upload_file_bytes(file_bytes, folder, nama_file):
         return supabase.storage.from_("KANTIN-ASSETS").get_public_url(path)
     except Exception: return None
 
-# --- JURUS JAVA SCRIPT: KLIK UNTUK COPY ---
+# --- [FIXED] JURUS COPY PASTE STABIL (GUNAKAN ST.CODE) ---
 def tampilkan_copy_text(text, label="SALIN"):
-    html_code = f"""
-    <div onclick="copyText_{text}()" style="cursor: pointer; background-color: #e3f2fd; border: 1px dashed #00AAFF; border-radius: 5px; padding: 10px; text-align: center; margin-bottom: 10px;">
-        <div style="font-size: 12px; color: #555;">KLIK UNTUK {label}</div>
-        <div style="font-size: 18px; font-weight: bold; color: #00AAFF;">{text}</div>
-        <div id="pesan_copy_{text}" style="font-size: 10px; color: green; height: 12px;"></div>
-    </div>
-    <script>
-    function copyText_{text}() {{
-        navigator.clipboard.writeText("{text}");
-        document.getElementById("pesan_copy_{text}").innerHTML = "✅ Tersalin!";
-        setTimeout(function() {{ document.getElementById("pesan_copy_{text}").innerHTML = ""; }}, 2000);
-    }}
-    </script>
-    """
-    components.html(html_code, height=80)
+    st.caption(f"👇 {label}:")
+    st.code(text, language="text")
 
 def tampilkan_total_copy_otomatis(total_rp, total_raw, kode_unik):
-    html_code = f"""
-    <div onclick="salinNominal()" style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px dashed #00AAFF; text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 20px;">
+    st.markdown(f"""
+    <div style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px dashed #00AAFF; text-align: center; margin-bottom: 5px;">
         <p style="margin:0; color: #555; font-size: 13px;">Total Belanja + Kode Unik (<b style="color:red">{kode_unik}</b>)</p>
         <h3 style="margin:5px 0; color: #00AAFF;">TOTAL TRANSFER:</h3>
-        <h2 style="margin:0; color: #000; font-family: sans-serif;">{total_rp} <span style="font-size:16px">📋</span></h2>
-        <div style="font-size: 11px; color: #00AAFF; font-weight:bold; margin-top:5px;">[KLIK UNTUK SALIN NOMINAL]</div>
-        <div id="notif_nominal" style="font-size: 11px; color: green; height: 15px; margin-top:2px;"></div>
+        <h2 style="margin:0; color: #000; font-family: sans-serif;">{total_rp}</h2>
     </div>
-    <script>
-    function salinNominal() {{
-        navigator.clipboard.writeText("{total_raw}");
-        document.getElementById("notif_nominal").innerHTML = "✅ Nominal {total_raw} berhasil disalin!";
-        setTimeout(function() {{ document.getElementById("notif_nominal").innerHTML = ""; }}, 3000);
-    }}
-    </script>
-    """
-    components.html(html_code, height=160)
+    """, unsafe_allow_html=True)
+    st.caption("👇 Salin nominal transfer:")
+    st.code(total_raw, language="text")
 
 # --- GENERATOR GAMBAR NOTA ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi, potongan_voucher=0):
@@ -239,7 +218,7 @@ def reset_keranjang():
     st.session_state.voucher_aktif = None
 
 # =========================================================
-# GLOBAL CALCULATION (Fix NameError)
+# GLOBAL CALCULATION
 # =========================================================
 total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
 total_qty = sum(item['qty'] for item in st.session_state.keranjang)
@@ -272,7 +251,6 @@ if menu == "🏠 Beranda":
     st.divider()
     st.info("💡 **Fitur Baru:** Punya Voucher Refund? Masukkan kodenya saat pembayaran, saldo akan otomatis terpotong!")
     
-    # --- FITUR ULASAN TERBARU ---
     st.write("")
     st.subheader("💬 Apa Kata Mereka?")
     try:
@@ -381,6 +359,8 @@ elif menu == "🛍️ Pesan Barang":
         if st.session_state.nota_sukses:
             res_data = st.session_state.nota_sukses
             st.success("✅ Pesanan Berhasil Dikirim!")
+            
+            # --- TAMPILKAN RESI (DENGAN ST.CODE) ---
             tampilkan_copy_text(res_data['resi'], "NOMOR RESI")
             st.write("") 
             
@@ -664,7 +644,6 @@ elif menu == "🔍 Lacak Pesanan":
                 else:
                     st.info("✅ Ulasan terkirim.")
                     st.write(f"Rating: {'⭐'*d['rating']}")
-                    if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
 
