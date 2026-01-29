@@ -26,7 +26,6 @@ waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
 jam_skrg = waktu_skrg_wib.hour
 
 # LOGIKA TUTUP TOKO
-# Jika jam sekarang KURANG DARI jam buka ATAU LEBIH DARI jam tutup
 if jam_skrg < JAM_BUKA or jam_skrg >= JAM_TUTUP:
     st.markdown(f"""
     <div style='text-align: center; padding: 50px;'>
@@ -617,6 +616,13 @@ elif menu == "🔍 Lacak Pesanan":
             
             st.write(f"**Item:** {d['item_pesanan']}")
             st.caption(f"Pemesan: {d['nama_pemesan']} | Penerima: {d['untuk_siapa']}")
+            
+            # --- FIX: TAMPILKAN FOTO BUKTI SERAH TERIMA JIKA ADA ---
+            if d['status'] == "Selesai" and d.get('foto_penerima'):
+                st.write("")
+                st.success("📸 **Bukti Serah Terima Barang:**")
+                st.image(d['foto_penerima'], width=300, caption=f"Diterima oleh: {d['untuk_siapa']}")
+            # ---------------------------------------------------------
             
             if d['status'] == "Menunggu Verifikasi":
                 st.divider()
