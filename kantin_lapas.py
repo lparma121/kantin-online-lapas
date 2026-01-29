@@ -242,24 +242,16 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     d.text((30, y), f"PENERIMA  : {data_pesanan['untuk_siapa']}", fill="black"); y+=25
     d.line((20, y+10, 480, y+10), fill="gray", width=1)
     y += 30
-   d.text((30, y), "ITEM PESANAN:", fill="black"); y += 25
-    
+    d.text((30, y), "ITEM PESANAN:", fill="black"); y += 25
     for item in list_keranjang:
-        nama = item['nama'][:25]  # Potong nama agar tidak tabrakan dengan angka
-        qty = f"{item['qty']}x"   # Ambil jumlah barang
-        harga_satuan = format_rupiah(item['harga'])
-        total_item = format_rupiah(item['harga'] * item['qty']) # Total per baris
-        
-        # Kolom 1: Nama Barang
+        nama = item['nama'][:40]
+        sub_detail = f"  {item['qty']} x {format_rupiah(item['harga'])}"
+        total_per_item = format_rupiah(item['harga'] * item['qty'])
         d.text((30, y), f"- {nama}", fill="black")
-        
-        # Kolom 2: Quantity (Posisi agak ke tengah, misal x=230)
-        d.text((230, y), qty, fill="black")
-        
-        # Kolom 3: Harga Total Item (Posisi x=350 seperti sebelumnya)
-        d.text((350, y), total_item, fill="black")
-        
-        y += 25
+        y += 20 # Turun sedikit untuk detail harga
+        d.text((30, y), sub_detail, fill="gray") # Harga satuan warna abu-abu
+        d.text((350, y), total_per_item, fill="black") # Total harga sejajar dengan sub_detail
+        y += 30 # Beri jarak untuk item berikutnya
     d.line((20, y+10, 480, y+10), fill="black", width=2)
     y += 30
     d.text((30, y), "TOTAL TRANSFER", fill="black")
@@ -691,6 +683,7 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
+
 
 
 
