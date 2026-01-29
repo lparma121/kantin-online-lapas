@@ -473,9 +473,11 @@ elif menu == "🛍️ Pesan Barang":
                     
                     if "BRI" in metode_bayar:
                         st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
-                    else:
+                    elif:
                         st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    elif:    
                         st.warning("📱 **OVO: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    elif:    
                         st.warning("📱 **GoPay: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
                 else:
                     st.markdown("""
@@ -676,6 +678,7 @@ if total_duit > 0:
         with c_float_2:
             if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                 show_cart_modal()
+
 
 
 
