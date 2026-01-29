@@ -22,8 +22,8 @@ except Exception as e:
     st.stop()
 
 # --- 3. SETTING JAM OPERASIONAL (WIB) ---
-JAM_BUKA = 7
-JAM_TUTUP = 22
+JAM_BUKA = 00
+JAM_TUTUP = 19
 
 waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
 jam_skrg = waktu_skrg_wib.hour
@@ -432,3 +432,4 @@ elif menu == "🔍 Lacak Pesanan":
                             supabase.table("pesanan").update({"rating": rate, "ulasan": kom}).eq("id", d['id']).execute()
                             st.success("Terima kasih!"); st.rerun()
             else: st.error("Tidak ditemukan.")
+
