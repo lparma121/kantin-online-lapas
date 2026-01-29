@@ -243,17 +243,22 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi):
     d.line((20, y+10, 480, y+10), fill="gray", width=1)
     y += 30
    d.text((30, y), "ITEM PESANAN:", fill="black"); y += 25
+    
     for item in list_keranjang:
         nama = item['nama'][:25]  # Potong nama agar tidak tabrakan dengan angka
         qty = f"{item['qty']}x"   # Ambil jumlah barang
         harga_satuan = format_rupiah(item['harga'])
         total_item = format_rupiah(item['harga'] * item['qty']) # Total per baris
+        
         # Kolom 1: Nama Barang
         d.text((30, y), f"- {nama}", fill="black")
+        
         # Kolom 2: Quantity (Posisi agak ke tengah, misal x=230)
         d.text((230, y), qty, fill="black")
+        
         # Kolom 3: Harga Total Item (Posisi x=350 seperti sebelumnya)
         d.text((350, y), total_item, fill="black")
+        
         y += 25
     d.line((20, y+10, 480, y+10), fill="black", width=2)
     y += 30
@@ -686,6 +691,7 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
+
 
 
 
