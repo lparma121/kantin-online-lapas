@@ -20,7 +20,7 @@ except:
 
 # --- SETTING JAM OPERASIONAL (WIB) ---
 JAM_BUKA = 7
-JAM_TUTUP = 22
+JAM_TUTUP = 17
 
 waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
 jam_skrg = waktu_skrg_wib.hour
@@ -147,29 +147,42 @@ def upload_file_bytes(file_bytes, folder, nama_file):
         return supabase.storage.from_("KANTIN-ASSETS").get_public_url(path)
     except Exception: return None
 
-# --- [PERBAIKAN] FUNGSI TAMPILAN COPY ---
-# Kita gunakan st.code() karena lebih stabil dan pasti muncul tombol copy-nya
+# --- JURUS JAVA SCRIPT: KLIK UNTUK COPY ---
 def tampilkan_copy_text(text, label="SALIN"):
-    st.markdown(f"""
-    <div style="background-color: #f0f8ff; border: 2px dashed #00AAFF; border-radius: 10px; padding: 10px; text-align: center; margin-bottom: 5px;">
-        <div style="font-size: 12px; color: #555;">{label}</div>
-        <div style="font-size: 20px; font-weight: bold; color: #00AAFF;">{text}</div>
+    html_code = f"""
+    <div onclick="copyText_{text}()" style="cursor: pointer; background-color: #e3f2fd; border: 1px dashed #00AAFF; border-radius: 5px; padding: 10px; text-align: center; margin-bottom: 10px;">
+        <div style="font-size: 12px; color: #555;">KLIK UNTUK {label}</div>
+        <div style="font-size: 18px; font-weight: bold; color: #00AAFF;">{text}</div>
+        <div id="pesan_copy_{text}" style="font-size: 10px; color: green; height: 12px;"></div>
     </div>
-    """, unsafe_allow_html=True)
-    # Tombol copy bawaan Streamlit (Paling Stabil)
-    st.code(text, language='text')
+    <script>
+    function copyText_{text}() {{
+        navigator.clipboard.writeText("{text}");
+        document.getElementById("pesan_copy_{text}").innerHTML = "✅ Tersalin!";
+        setTimeout(function() {{ document.getElementById("pesan_copy_{text}").innerHTML = ""; }}, 2000);
+    }}
+    </script>
+    """
+    components.html(html_code, height=80)
 
 def tampilkan_total_copy_otomatis(total_rp, total_raw, kode_unik):
-    st.markdown(f"""
-    <div style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px dashed #00AAFF; text-align: center; margin-bottom: 5px;">
+    html_code = f"""
+    <div onclick="salinNominal()" style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px dashed #00AAFF; text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 20px;">
         <p style="margin:0; color: #555; font-size: 13px;">Total Belanja + Kode Unik (<b style="color:red">{kode_unik}</b>)</p>
         <h3 style="margin:5px 0; color: #00AAFF;">TOTAL TRANSFER:</h3>
-        <h2 style="margin:0; color: #000; font-family: sans-serif;">{total_rp}</h2>
+        <h2 style="margin:0; color: #000; font-family: sans-serif;">{total_rp} <span style="font-size:16px">📋</span></h2>
+        <div style="font-size: 11px; color: #00AAFF; font-weight:bold; margin-top:5px;">[KLIK UNTUK SALIN NOMINAL]</div>
+        <div id="notif_nominal" style="font-size: 11px; color: green; height: 15px; margin-top:2px;"></div>
     </div>
-    """, unsafe_allow_html=True)
-    # Tombol copy bawaan Streamlit (Paling Stabil)
-    st.caption("👇 Klik tombol di pojok kanan kotak ini untuk menyalin:")
-    st.code(total_raw, language='text')
+    <script>
+    function salinNominal() {{
+        navigator.clipboard.writeText("{total_raw}");
+        document.getElementById("notif_nominal").innerHTML = "✅ Nominal {total_raw} berhasil disalin!";
+        setTimeout(function() {{ document.getElementById("notif_nominal").innerHTML = ""; }}, 3000);
+    }}
+    </script>
+    """
+    components.html(html_code, height=160)
 
 # --- GENERATOR GAMBAR NOTA ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi, potongan_voucher=0):
@@ -259,6 +272,7 @@ if menu == "🏠 Beranda":
     st.divider()
     st.info("💡 **Fitur Baru:** Punya Voucher Refund? Masukkan kodenya saat pembayaran, saldo akan otomatis terpotong!")
     
+    # --- FITUR ULASAN TERBARU ---
     st.write("")
     st.subheader("💬 Apa Kata Mereka?")
     try:
@@ -363,23 +377,15 @@ elif menu == "🛍️ Pesan Barang":
     with tab_checkout:
         st.header("📝 Konfirmasi & Pembayaran")
         
+        # LOGIKA TAMPILAN: JIKA SUKSES -> NOTA
         if st.session_state.nota_sukses:
-            # LOGIKA TAMPILAN: JIKA SUKSES -> NOTA | JIKA BELUM -> FORM
-        if st.session_state.nota_sukses:
-            # --- TAMPILAN SUKSES ---
             res_data = st.session_state.nota_sukses
-            
             st.success("✅ Pesanan Berhasil Dikirim!")
-            
-            # 1. Tampilkan Resi dengan Tombol Salin (Tanpa Gambar)
             tampilkan_copy_text(res_data['resi'], "NOMOR RESI")
+            st.write("") 
             
-            st.write("") # Memberi sedikit jarak
-            
-            # 2. Tombol Aksi (Download & Belanja Lagi)
             c_dl, c_new = st.columns(2)
             with c_dl:
-                # Tombol Download Nota tetap ada (penting untuk bukti)
                 st.download_button(
                     label="📥 Simpan Nota",
                     data=res_data['data'],
@@ -392,7 +398,6 @@ elif menu == "🛍️ Pesan Barang":
                 if st.button("🔄 Belanja Lagi", use_container_width=True):
                     st.session_state.nota_sukses = None
                     st.rerun()
-            
             st.info("Mohon simpan resi ini untuk melacak status pesanan Anda.")
             
         else:
@@ -455,7 +460,7 @@ elif menu == "🛍️ Pesan Barang":
                     c1.write(f"Potongan Voucher: -{format_rupiah(nominal_potongan)}")
                 
                 # ------------------------------------------
-                # 2. PILIH METODE BAYAR (DI LUAR FORM AGAR INTERAKTIF)
+                # 2. PILIH METODE BAYAR (DI LUAR FORM)
                 # ------------------------------------------
                 metode_bayar = "Full Voucher" # Default jika lunas
                 
@@ -466,7 +471,7 @@ elif menu == "🛍️ Pesan Barang":
                     st.caption("⚠️ **PENTING:** Mohon transfer **TEPAT** sampai 3 digit terakhir.")
                     st.write("---")
                     
-                    # [FIX] Selectbox dengan pilihan yang lebih spesifik
+                    # [FIX] Selectbox dengan pilihan spesifik
                     opsi_pembayaran = [
                         "Transfer Bank (BRI)", 
                         "E-Wallet (DANA)", 
@@ -659,6 +664,7 @@ elif menu == "🔍 Lacak Pesanan":
                 else:
                     st.info("✅ Ulasan terkirim.")
                     st.write(f"Rating: {'⭐'*d['rating']}")
+                    if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
 
@@ -675,5 +681,3 @@ if total_duit > 0:
         with c_float_2:
             if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                 show_cart_modal()
-
-
