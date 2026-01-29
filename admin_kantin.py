@@ -320,12 +320,12 @@ elif menu_admin == "📋 Daftar Pesanan":
                                             st.error("Gagal upload foto.")
                                     else:
                                         st.error("⚠️ Foto penyerahan wajib diambil!")
-                               else:
-                                    # Jika status BUKAN selesai (misal kembali ke pending), boleh rerun
-                                    supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
-                                    st.success(f"Status diubah: {st_baru}")
-                                    time.sleep(1)
-                                    st.rerun()
+                                   else:
+                                        # Jika status BUKAN selesai (misal kembali ke pending), boleh rerun
+                                        supabase.table("pesanan").update(u_data).eq("id", p['id']).execute()
+                                        st.success(f"Status diubah: {st_baru}")
+                                        time.sleep(1)
+                                        st.rerun()
 
     # --- LOGIKA ISI TAB ---
     
