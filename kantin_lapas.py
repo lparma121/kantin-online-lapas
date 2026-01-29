@@ -20,7 +20,7 @@ except:
 
 # --- SETTING JAM OPERASIONAL (WIB) ---
 JAM_BUKA = 7
-JAM_TUTUP = 21
+JAM_TUTUP = 17
 
 waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
 jam_skrg = waktu_skrg_wib.hour
@@ -147,42 +147,29 @@ def upload_file_bytes(file_bytes, folder, nama_file):
         return supabase.storage.from_("KANTIN-ASSETS").get_public_url(path)
     except Exception: return None
 
-# --- JURUS JAVA SCRIPT: KLIK UNTUK COPY ---
+# --- [PERBAIKAN] FUNGSI TAMPILAN COPY ---
+# Kita gunakan st.code() karena lebih stabil dan pasti muncul tombol copy-nya
 def tampilkan_copy_text(text, label="SALIN"):
-    html_code = f"""
-    <div onclick="copyText_{text}()" style="cursor: pointer; background-color: #e3f2fd; border: 1px dashed #00AAFF; border-radius: 5px; padding: 10px; text-align: center; margin-bottom: 10px;">
-        <div style="font-size: 12px; color: #555;">KLIK UNTUK {label}</div>
-        <div style="font-size: 18px; font-weight: bold; color: #00AAFF;">{text}</div>
-        <div id="pesan_copy_{text}" style="font-size: 10px; color: green; height: 12px;"></div>
+    st.markdown(f"""
+    <div style="background-color: #f0f8ff; border: 2px dashed #00AAFF; border-radius: 10px; padding: 10px; text-align: center; margin-bottom: 5px;">
+        <div style="font-size: 12px; color: #555;">{label}</div>
+        <div style="font-size: 20px; font-weight: bold; color: #00AAFF;">{text}</div>
     </div>
-    <script>
-    function copyText_{text}() {{
-        navigator.clipboard.writeText("{text}");
-        document.getElementById("pesan_copy_{text}").innerHTML = "✅ Tersalin!";
-        setTimeout(function() {{ document.getElementById("pesan_copy_{text}").innerHTML = ""; }}, 2000);
-    }}
-    </script>
-    """
-    components.html(html_code, height=80)
+    """, unsafe_allow_html=True)
+    # Tombol copy bawaan Streamlit (Paling Stabil)
+    st.code(text, language='text')
 
 def tampilkan_total_copy_otomatis(total_rp, total_raw, kode_unik):
-    html_code = f"""
-    <div onclick="salinNominal()" style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px dashed #00AAFF; text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 20px;">
+    st.markdown(f"""
+    <div style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px dashed #00AAFF; text-align: center; margin-bottom: 5px;">
         <p style="margin:0; color: #555; font-size: 13px;">Total Belanja + Kode Unik (<b style="color:red">{kode_unik}</b>)</p>
         <h3 style="margin:5px 0; color: #00AAFF;">TOTAL TRANSFER:</h3>
-        <h2 style="margin:0; color: #000; font-family: sans-serif;">{total_rp} <span style="font-size:16px">📋</span></h2>
-        <div style="font-size: 11px; color: #00AAFF; font-weight:bold; margin-top:5px;">[KLIK UNTUK SALIN NOMINAL]</div>
-        <div id="notif_nominal" style="font-size: 11px; color: green; height: 15px; margin-top:2px;"></div>
+        <h2 style="margin:0; color: #000; font-family: sans-serif;">{total_rp}</h2>
     </div>
-    <script>
-    function salinNominal() {{
-        navigator.clipboard.writeText("{total_raw}");
-        document.getElementById("notif_nominal").innerHTML = "✅ Nominal {total_raw} berhasil disalin!";
-        setTimeout(function() {{ document.getElementById("notif_nominal").innerHTML = ""; }}, 3000);
-    }}
-    </script>
-    """
-    components.html(html_code, height=160)
+    """, unsafe_allow_html=True)
+    # Tombol copy bawaan Streamlit (Paling Stabil)
+    st.caption("👇 Klik tombol di pojok kanan kotak ini untuk menyalin:")
+    st.code(total_raw, language='text')
 
 # --- GENERATOR GAMBAR NOTA ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi, potongan_voucher=0):
@@ -239,7 +226,7 @@ def reset_keranjang():
     st.session_state.voucher_aktif = None
 
 # =========================================================
-# 🔥 [FIXED] HITUNG TOTAL DUIT SECARA GLOBAL AGAR TIDAK ERROR
+# GLOBAL CALCULATION (Fix NameError)
 # =========================================================
 total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
 total_qty = sum(item['qty'] for item in st.session_state.keranjang)
@@ -272,7 +259,6 @@ if menu == "🏠 Beranda":
     st.divider()
     st.info("💡 **Fitur Baru:** Punya Voucher Refund? Masukkan kodenya saat pembayaran, saldo akan otomatis terpotong!")
     
-    # --- FITUR ULASAN TERBARU ---
     st.write("")
     st.subheader("💬 Apa Kata Mereka?")
     try:
@@ -296,8 +282,6 @@ if menu == "🏠 Beranda":
 # =========================================
 elif menu == "🛍️ Pesan Barang":
     st.markdown("<h2 style='margin-bottom:10px;'>🛍️ Etalase</h2>", unsafe_allow_html=True)
-
-    # Note: total_duit sudah dihitung secara global di atas
 
     @st.dialog("🛒 Keranjang Belanja")
     def show_cart_modal():
@@ -383,7 +367,7 @@ elif menu == "🛍️ Pesan Barang":
             # --- TAMPILAN SUKSES ---
             res_data = st.session_state.nota_sukses
             st.success("✅ Pesanan Berhasil Dikirim!")
-            tampilkan_copy_text(res_data['resi'], "SALIN RESI")
+            tampilkan_copy_text(res_data['resi'], "NOMOR RESI")
             
             b64 = image_to_base64(res_data['data'])
             st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:250px; border:1px solid #ddd; margin-bottom:10px;">', unsafe_allow_html=True)
@@ -469,24 +453,24 @@ elif menu == "🛍️ Pesan Barang":
                     st.write("---")
                     
                     # [FIX] Selectbox dengan pilihan yang lebih spesifik
-                opsi_pembayaran = [
-                    "Transfer Bank (BRI)", 
-                    "DANA", 
-                    "OVO", 
-                    "GoPay"
-                ]
-                
-                metode_bayar = st.selectbox("Pilih Metode Transfer Sisa", opsi_pembayaran)
-                
-                # [FIX] Logika tampilan satu per satu
-                if "BRI" in metode_bayar:
-                    st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
-                elif "DANA" in metode_bayar:
-                    st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
-                elif "OVO" in metode_bayar:
-                    st.warning("💜 **OVO: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
-                elif "GoPay" in metode_bayar:
-                    st.warning("🟢 **GoPay: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    opsi_pembayaran = [
+                        "Transfer Bank (BRI)", 
+                        "E-Wallet (DANA)", 
+                        "E-Wallet (OVO)", 
+                        "E-Wallet (GoPay)"
+                    ]
+                    
+                    metode_bayar = st.selectbox("Pilih Metode Transfer Sisa", opsi_pembayaran)
+                    
+                    # [FIX] Logika tampilan satu per satu
+                    if "BRI" in metode_bayar:
+                        st.warning("🏦 **BRI: 1234-5678-900 (Koperasi Lapas)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    elif "DANA" in metode_bayar:
+                        st.warning("📱 **DANA: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    elif "OVO" in metode_bayar:
+                        st.warning("💜 **OVO: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
+                    elif "GoPay" in metode_bayar:
+                        st.warning("🟢 **GoPay: 0812-3456-7890 (Admin Kantin)**\n\nSilakan transfer sesuai **TOTAL TRANSFER** di atas.")
                 else:
                     st.markdown("""
                     <div style="background-color:#e8f5e9; padding:15px; border-radius:10px; text-align:center; border:1px solid green;">
@@ -561,8 +545,9 @@ elif menu == "🛍️ Pesan Barang":
 
                             except Exception as e:
                                 st.error(f"Error Sistem: {e}")
+
 # =========================================
-# 3. LACAK PESANAN (UPDATE: REFUND OTOMATIS)
+# 3. LACAK PESANAN
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
@@ -581,20 +566,22 @@ elif menu == "🔍 Lacak Pesanan":
             st.divider()
             st.write(f"📦 **Pesanan Ditemukan:** `{d['no_resi']}`")
             
-            # Status Bar
             status_color = "green" if d['status'] == "Selesai" else "red" if "Dibatalkan" in d['status'] or "Ditolak" in d['status'] else "blue"
             st.markdown(f"""<div style="padding:10px; background-color:{'#e8f5e9' if status_color=='green' else '#ffebee' if status_color=='red' else '#e3f2fd'}; border:1px solid {status_color}; border-radius:5px;"><h3 style="margin:0; color:{status_color};">{d['status']}</h3></div>""", unsafe_allow_html=True)
             
             st.write(f"**Item:** {d['item_pesanan']}")
             st.caption(f"Pemesan: {d['nama_pemesan']}")
             
-            # Foto Serah Terima
-            if d.get('foto_penerima'):
-                st.write("---")
+            # --- FOTO SERAH TERIMA ---
+            foto_url = d.get('foto_penerima')
+            st.write("---")
+            if foto_url:
                 st.success("📸 **Bukti Serah Terima:**")
-                st.image(d['foto_penerima'], width=300)
-            
-            # LOGIKA REFUND OTOMATIS (GENERATOR VOUCHER)
+                st.image(foto_url, width=300)
+            elif d['status'] == "Selesai":
+                st.warning("⚠️ Foto serah terima sedang diunggah.")
+
+            # LOGIKA REFUND OTOMATIS
             if d['status'] == "Menunggu Verifikasi":
                 st.divider()
                 st.info("Tombol pembatalan muncul setelah 4 jam.")
@@ -607,7 +594,6 @@ elif menu == "🔍 Lacak Pesanan":
                         st.error("Waktu tunggu habis.")
                         if st.button("❌ Batalkan & Simpan Saldo ke Voucher"):
                             try:
-                                # 1. Refund Stok Barang
                                 refund_nominal = 0
                                 for i_str in d['item_pesanan'].split(", "):
                                     if "x " in i_str: q_str, n = i_str.split("x ", 1); q = int(q_str)
@@ -617,15 +603,9 @@ elif menu == "🔍 Lacak Pesanan":
                                         supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
                                         refund_nominal += cur.data[0]['harga']*q
                                 
-                                # HITUNG TOTAL REFUND (Uang Transfer + Voucher yang terpakai)
-                                nominal_potongan_lama = d.get('potongan_voucher', 0)
-                                if nominal_potongan_lama is None: nominal_potongan_lama = 0
+                                nominal_potongan_lama = d.get('potongan_voucher', 0) or 0
+                                total_refund = refund_nominal # Kembalikan nilai barang
                                 
-                                # Total saldo yang harus dikembalikan = (Total Transfer - Kode Unik) + Potongan Voucher Lama
-                                # Atau simpelnya: Harga Barang Asli
-                                total_refund = refund_nominal 
-
-                                # 2. Generate Kode Voucher Baru
                                 kode_baru = generate_kode_voucher()
                                 data_voucher = {
                                     "kode_voucher": kode_baru,
@@ -634,22 +614,18 @@ elif menu == "🔍 Lacak Pesanan":
                                     "pemilik": d['nama_pemesan']
                                 }
                                 supabase.table("vouchers").insert(data_voucher).execute()
-                                
-                                # 3. Update Status
                                 supabase.table("pesanan").update({"status": "Dibatalkan (Refund Voucher)"}).eq("id", d['id']).execute()
                                 
-                                # 4. Tampilkan Kode
                                 st.success("✅ Berhasil Dibatalkan!")
                                 st.markdown(f"""
                                 <div style="background-color:#fff3cd; padding:20px; border-radius:10px; text-align:center; border:2px dashed orange;">
                                     <p>Saldo Anda telah diamankan ke Voucher:</p>
                                     <h1 style="color:#d35400; font-family:monospace; font-size:30px; letter-spacing: 2px;">{kode_baru}</h1>
                                     <p>Saldo: <b>{format_rupiah(total_refund)}</b></p>
-                                    <small>Simpan/Screenshot kode ini untuk belanja berikutnya!</small>
+                                    <small>Simpan kode ini!</small>
                                 </div>
                                 """, unsafe_allow_html=True)
                                 tampilkan_copy_text(kode_baru, "SALIN KODE VOUCHER")
-                                
                                 del st.session_state.resi_aktif
                                 st.stop()
                             except Exception as e: st.error(f"Gagal Refund: {e}")
@@ -672,7 +648,6 @@ elif menu == "🔍 Lacak Pesanan":
         else:
             st.error("Tidak ditemukan.")
 
-# --- Floating Button Logic (Global) ---
 class_tambahan = "naik" if total_duit > 0 else ""
 st.markdown(f'<a href="#paling-atas" class="back-to-top {class_tambahan}">⬆️</a>', unsafe_allow_html=True)
 
@@ -686,12 +661,3 @@ if total_duit > 0:
         with c_float_2:
             if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
                 show_cart_modal()
-
-
-
-
-
-
-
-
-
