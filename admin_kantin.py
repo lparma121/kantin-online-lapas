@@ -295,7 +295,7 @@ elif menu_admin == "📋 Daftar Pesanan":
                             
                             btn_proses = st.form_submit_button("Simpan & Proses")
                             
-                            if btn_proses:
+                           if btn_proses:
                                 u_data = {"status": st_baru}
                                 
                                 # Logika simpan foto jika status selesai
@@ -314,10 +314,13 @@ elif menu_admin == "📋 Daftar Pesanan":
                                             link_wa = f"https://wa.me/{no_hp}?text={msg.replace(' ', '%20')}"
                                             
                                             st.success("✅ Pesanan Selesai!")
+                                            st.info("Silakan klik tombol di bawah untuk lapor ke keluarga:")
                                             st.link_button("📲 Kabari via WA", link_wa)
-                                            time.sleep(2)
-                                       
-                                    else:
+                                            
+                                            # HAPUS st.rerun() DI SINI AGAR TOMBOL WA TIDAK HILANG
+                                            # Admin bisa klik refresh manual nanti jika ingin membersihkan layar
+                                            
+                                        else:
                                             st.error("Gagal upload foto.")
                                     else:
                                         st.error("⚠️ Foto penyerahan wajib diambil!")
