@@ -20,7 +20,7 @@ except:
 
 # --- SETTING JAM OPERASIONAL (WIB) ---
 JAM_BUKA = 7
-JAM_TUTUP = 17
+JAM_TUTUP = 21
 
 waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
 jam_skrg = waktu_skrg_wib.hour
@@ -641,3 +641,4 @@ elif menu == "🔍 Lacak Pesanan":
                     st.write(f"Rating: {'⭐'*d['rating']}")
         else:
             st.error("Tidak ditemukan.")
+
