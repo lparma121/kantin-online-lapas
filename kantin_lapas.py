@@ -587,18 +587,15 @@ elif menu == "🔍 Lacak Pesanan":
         else:
             st.warning("Mohon isi kode resi.")
 
-    # Logika Pencarian
+   # Logika Pencarian
     if 'resi_aktif' in st.session_state and st.session_state.resi_aktif:
-        # LOGIKA BARU: Gunakan ilike dengan wildcard % di depan
-        # Artinya: "Carikan resi yang BERAKHIRAN dengan kata kunci ini"
         keyword = st.session_state.resi_aktif
         res = supabase.table("pesanan").select("*").ilike("no_resi", f"%{keyword}").execute()
         
         if res.data:
-            # Jika ditemukan banyak (misal ada 2 resi akhiran sama), ambil yang terbaru
-            # Kita urutkan dulu data di python (opsional tapi aman)
+            # Ambil data terbaru
             data_found = sorted(res.data, key=lambda x: x['id'], reverse=True)
-            d = data_found[0] # Ambil yang paling cocok/terbaru
+            d = data_found[0] 
             
             st.divider()
             st.write(f"📦 **Pesanan Ditemukan:** `{d['no_resi']}`")
@@ -617,93 +614,69 @@ elif menu == "🔍 Lacak Pesanan":
             st.write(f"**Item:** {d['item_pesanan']}")
             st.caption(f"Pemesan: {d['nama_pemesan']} | Penerima: {d['untuk_siapa']}")
             
-            # --- FIX: TAMPILKAN FOTO BUKTI SERAH TERIMA JIKA ADA ---
-            if d['status'] == "Selesai" and d.get('foto_penerima'):
-                st.write("")
-                st.success("📸 **Bukti Serah Terima Barang:**")
-                st.image(d['foto_penerima'], width=300, caption=f"Diterima oleh: {d['untuk_siapa']}")
-            # ---------------------------------------------------------
+            # =================================================================
+            # 🔥 BAGIAN PERBAIKAN UTAMA: FOTO SERAH TERIMA
+            # =================================================================
+            foto_url = d.get('foto_penerima') # Ambil data kolom foto_penerima
             
+            # Kita tampilkan pembatas dulu
+            st.write("---") 
+            
+            if foto_url:
+                # JIKA ADA URL DI DATABASE -> TAMPILKAN GAMBAR
+                st.success("📸 **Bukti Serah Terima Barang:**")
+                st.image(foto_url, width=300, caption=f"Diterima oleh: {d['untuk_siapa']}")
+            else:
+                # JIKA URL KOSONG DI DATABASE
+                if d['status'] == "Selesai":
+                    st.warning("⚠️ Status pesanan 'Selesai', tetapi Admin belum mengunggah foto bukti.")
+                    st.caption("(Debug: Kolom 'foto_penerima' terbaca Kosong/Null di database)")
+            # =================================================================
+            
+            # --- LOGIKA TOMBOL BATAL (Menunggu Verifikasi) ---
             if d['status'] == "Menunggu Verifikasi":
-                st.divider()
-                st.warning("⚠️ Opsi Pembatalan")
-                st.info("ℹ️ **Kebijakan Pembatalan:** Anda dapat membatalkan pesanan jika Admin tidak memproses pesanan selama **4 Jam**.")
-                
+                st.info("ℹ️ **Info:** Tombol batalkan pesanan akan muncul otomatis jika 4 jam belum diproses.")
                 try:
                     waktu_str = d.get('created_at')
-                    if not waktu_str:
-                        waktu_pesan = datetime.now(timezone.utc)
-                    else:
-                        waktu_pesan_str = waktu_str.replace('Z', '+00:00')
-                        waktu_pesan = datetime.fromisoformat(waktu_pesan_str)
+                    if not waktu_str: waktu_pesan = datetime.now(timezone.utc)
+                    else: waktu_pesan = datetime.fromisoformat(waktu_str.replace('Z', '+00:00'))
                     
-                    waktu_sekarang = datetime.now(timezone.utc)
-                    selisih = waktu_sekarang - waktu_pesan
-                    batas_waktu = timedelta(hours=4)
-                    
-                    if selisih >= batas_waktu:
+                    if (datetime.now(timezone.utc) - waktu_pesan) >= timedelta(hours=4):
                         st.error("Waktu tunggu 4 jam terlewati.")
                         if st.button("❌ Batalkan & Refund Sekarang"):
                             try:
                                 refund = 0
                                 for i_str in d['item_pesanan'].split(", "):
-                                    if "x " in i_str:
-                                        q_str, n = i_str.split("x ", 1)
-                                        q = int(q_str)
-                                    else:
-                                        q = 1; n = i_str 
-                                    
+                                    if "x " in i_str: q_str, n = i_str.split("x ", 1); q = int(q_str)
+                                    else: q = 1; n = i_str 
                                     cur = supabase.table("barang").select("*").eq("nama_barang", n).execute()
                                     if cur.data:
                                         supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
                                         refund += cur.data[0]['harga']*q
-                                
                                 supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
                                 vcr = buat_voucher_image(d['nama_pemesan'], refund, d['no_resi'])
                                 b64_v = image_to_base64(vcr)
                                 st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
                                 st.download_button("Download Voucher", vcr, f"V_{d['no_resi']}.jpg", "image/jpeg")
-                                del st.session_state.resi_aktif
-                                st.stop()
+                                del st.session_state.resi_aktif; st.stop()
                             except Exception as e: st.error(f"Gagal: {e}")
-                    else:
-                        sisa = batas_waktu - selisih
-                        total_detik = int(sisa.total_seconds())
-                        jam, sisa_detik = divmod(total_detik, 3600)
-                        menit, _ = divmod(sisa_detik, 60)
-                        if not waktu_str:
-                             st.caption("⚠️ Data waktu tidak ditemukan.")
-                        else:
-                             st.warning(f"⏳ **Hitung Mundur:** Tombol batal akan muncul dalam **{jam} Jam {menit} Menit**.")
-                except Exception as e:
-                    st.write(f"Error sistem waktu: {e}")
+                except: pass
 
+            # --- LOGIKA ULASAN (Selesai) ---
             elif d['status'] == "Selesai":
-                st.divider()
                 st.subheader("⭐ Berikan Ulasan")
-                
                 if d.get('rating') is None:
                     with st.form("form_ulasan"):
-                        st.write("Bagaimana kepuasan Anda belanja di e-PAS Mart?")
-                        bintang_opsi = {
-                            "5 - Sangat Puas 😍": 5, "4 - Puas 😊": 4,
-                            "3 - Cukup 😐": 3, "2 - Kurang 😕": 2, "1 - Kecewa 😡": 1
-                        }
-                        pilihan = st.selectbox("Rating Bintang", list(bintang_opsi.keys()))
-                        nilai_rating = bintang_opsi[pilihan]
-                        komentar = st.text_area("Tulis komentar (opsional)")
-                        
-                        if st.form_submit_button("Kirim Ulasan"):
-                            try:
-                                supabase.table("pesanan").update({
-                                    "rating": nilai_rating, "ulasan": komentar
-                                }).eq("id", d['id']).execute()
-                                st.success("Terima kasih atas ulasan Anda!")
-                                st.rerun()
-                            except Exception as e: st.error(f"Gagal kirim ulasan: {e}")
+                        st.write("Bagaimana kepuasan Anda?")
+                        pil = st.selectbox("Rating", ["5 - Puas", "4 - Baik", "3 - Cukup", "2 - Kurang", "1 - Kecewa"])
+                        kom = st.text_area("Komentar")
+                        if st.form_submit_button("Kirim"):
+                            rate_val = int(pil.split(" - ")[0])
+                            supabase.table("pesanan").update({"rating": rate_val, "ulasan": kom}).eq("id", d['id']).execute()
+                            st.success("Terima kasih!"); st.rerun()
                 else:
-                    st.info("✅ Anda sudah memberikan ulasan untuk pesanan ini.")
-                    st.markdown(f"**Rating:** {'⭐' * d['rating']}")
-                    if d.get('ulasan'): st.markdown(f"**Komentar:** *\"{d['ulasan']}\"*")
+                    st.info("✅ Ulasan terkirim.")
+                    st.write(f"Rating: {'⭐'*d['rating']}")
+                    if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Tidak ditemukan.")
