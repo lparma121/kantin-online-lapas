@@ -20,7 +20,7 @@ except:
 
 # --- SETTING JAM OPERASIONAL (WIB) ---
 JAM_BUKA = 7
-JAM_TUTUP = 21
+JAM_TUTUP = 17
 
 waktu_skrg_wib = datetime.now(timezone.utc) + timedelta(hours=7)
 jam_skrg = waktu_skrg_wib.hour
@@ -123,13 +123,11 @@ def generate_resi():
 
 # --- FUNGSI BARU: VOUCHER SYSTEM ---
 def generate_kode_voucher():
-    # Format: V-ABCD-1234
     huruf = ''.join(random.choices(string.ascii_uppercase, k=4))
     angka = ''.join(random.choices(string.digits, k=4))
     return f"V-{huruf}-{angka}"
 
 def cek_voucher_db(kode):
-    # Cek ke database apakah voucher valid
     try:
         res = supabase.table("vouchers").select("*").eq("kode_voucher", kode).eq("status", "AKTIF").execute()
         if res.data:
@@ -167,11 +165,32 @@ def tampilkan_copy_text(text, label="SALIN"):
     """
     components.html(html_code, height=80)
 
+def tampilkan_total_copy_otomatis(total_rp, total_raw, kode_unik):
+    html_code = f"""
+    <div onclick="salinNominal()" style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px dashed #00AAFF; text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 20px;">
+        <p style="margin:0; color: #555; font-size: 13px;">Total Belanja + Kode Unik (<b style="color:red">{kode_unik}</b>)</p>
+        <h3 style="margin:5px 0; color: #00AAFF;">TOTAL TRANSFER:</h3>
+        <h2 style="margin:0; color: #000; font-family: sans-serif;">{total_rp} <span style="font-size:16px">📋</span></h2>
+        <div style="font-size: 11px; color: #00AAFF; font-weight:bold; margin-top:5px;">[KLIK UNTUK SALIN NOMINAL]</div>
+        <div id="notif_nominal" style="font-size: 11px; color: green; height: 15px; margin-top:2px;"></div>
+    </div>
+    <script>
+    function salinNominal() {{
+        navigator.clipboard.writeText("{total_raw}");
+        document.getElementById("notif_nominal").innerHTML = "✅ Nominal {total_raw} berhasil disalin!";
+        setTimeout(function() {{ document.getElementById("notif_nominal").innerHTML = ""; }}, 3000);
+    }}
+    </script>
+    """
+    components.html(html_code, height=160)
+
 # --- GENERATOR GAMBAR NOTA ---
 def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi, potongan_voucher=0):
     width, height = 500, 750
     img = Image.new('RGB', (width, height), color='white')
     d = ImageDraw.Draw(img)
+    try: font_header = ImageFont.load_default() 
+    except: pass
     d.text((160, 20), "e-PAS Mart Lapas", fill="black")
     d.text((150, 40), "Bukti Transaksi Resmi", fill="gray")
     d.line((20, 70, 480, 70), fill="black", width=2)
@@ -212,12 +231,19 @@ def buat_struk_image(data_pesanan, list_keranjang, total_bayar, resi, potongan_v
 if 'keranjang' not in st.session_state: st.session_state.keranjang = []
 if 'nota_sukses' not in st.session_state: st.session_state.nota_sukses = None
 if 'kode_unik' not in st.session_state: st.session_state.kode_unik = random.randint(101, 999)
-if 'voucher_aktif' not in st.session_state: st.session_state.voucher_aktif = None # Menyimpan data voucher yg sedang dipakai
+if 'voucher_aktif' not in st.session_state: st.session_state.voucher_aktif = None
 
 def reset_keranjang(): 
     st.session_state.keranjang = []
     st.session_state.kode_unik = random.randint(101, 999)
     st.session_state.voucher_aktif = None
+
+# =========================================================
+# 🔥 [FIXED] HITUNG TOTAL DUIT SECARA GLOBAL AGAR TIDAK ERROR
+# =========================================================
+total_duit = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
+total_qty = sum(item['qty'] for item in st.session_state.keranjang)
+# =========================================================
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -271,9 +297,7 @@ if menu == "🏠 Beranda":
 elif menu == "🛍️ Pesan Barang":
     st.markdown("<h2 style='margin-bottom:10px;'>🛍️ Etalase</h2>", unsafe_allow_html=True)
 
-    # Hitung total barang murni
-    total_barang = sum(item['harga'] * item['qty'] for item in st.session_state.keranjang)
-    total_qty = sum(item['qty'] for item in st.session_state.keranjang)
+    # Note: total_duit sudah dihitung secara global di atas
 
     @st.dialog("🛒 Keranjang Belanja")
     def show_cart_modal():
@@ -289,7 +313,7 @@ elif menu == "🛍️ Pesan Barang":
                         del st.session_state.keranjang[i]
                         st.rerun()
             st.divider()
-            st.markdown(f"#### Total Barang: {format_rupiah(total_barang)}")
+            st.markdown(f"#### Total Barang: {format_rupiah(total_duit)}")
             if st.button("💳 Lanjut Pembayaran", type="primary", use_container_width=True):
                  st.toast("Silakan klik Tab 'Pembayaran'", icon="✅")
 
@@ -381,7 +405,7 @@ elif menu == "🛍️ Pesan Barang":
                 # LOGIKA PERHITUNGAN VOUCHER
                 # ==========================================
                 nominal_potongan = 0
-                sisa_tagihan = total_barang
+                sisa_tagihan = total_duit
                 
                 # Input Voucher
                 with st.expander("🎫 Punya Kode Voucher Refund?", expanded=True):
@@ -407,12 +431,12 @@ elif menu == "🛍️ Pesan Barang":
                         st.success(f"✅ **Voucher Terpasang:** {v['kode_voucher']}")
                         st.info(f"Saldo Voucher: {format_rupiah(saldo_voucher)}")
                         
-                        if saldo_voucher >= total_barang:
-                            nominal_potongan = total_barang
+                        if saldo_voucher >= total_duit:
+                            nominal_potongan = total_duit
                             sisa_tagihan = 0 # Lunas pakai voucher
                         else:
                             nominal_potongan = saldo_voucher
-                            sisa_tagihan = total_barang - saldo_voucher
+                            sisa_tagihan = total_duit - saldo_voucher
                         
                         if st.button("❌ Lepas Voucher"):
                             st.session_state.voucher_aktif = None
@@ -428,7 +452,7 @@ elif menu == "🛍️ Pesan Barang":
                 st.divider()
                 st.write("**Rincian Pembayaran:**")
                 c1, c2 = st.columns(2)
-                c1.write(f"Total Belanja: {format_rupiah(total_barang)}")
+                c1.write(f"Total Belanja: {format_rupiah(total_duit)}")
                 
                 if nominal_potongan > 0:
                     c1.write(f"Potongan Voucher: -{format_rupiah(nominal_potongan)}")
@@ -437,14 +461,13 @@ elif menu == "🛍️ Pesan Barang":
                     c1.write(f"Kode Unik: +{st.session_state.kode_unik}")
                     
                     # Tampilkan Total Transfer yg bisa dicopy
-                    tampilkan_copy_text(str(total_transfer), "SALIN NOMINAL")
+                    tampilkan_total_copy_otomatis(
+                        format_rupiah(total_transfer), # Tampilan
+                        str(total_transfer),           # Yang disalin
+                        st.session_state.kode_unik
+                    )
                     
-                    st.markdown(f"""
-                    <div style="background-color:#e3f2fd; padding:15px; border-radius:10px; text-align:center;">
-                        <small>SISA YANG HARUS DITRANSFER:</small>
-                        <h2 style="color:#00AAFF; margin:0;">{format_rupiah(total_transfer)}</h2>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.caption("⚠️ **PENTING:** Mohon transfer **TEPAT** sampai 3 digit terakhir agar pesanan dapat diverifikasi dengan cepat.")
                 else:
                     st.markdown("""
                     <div style="background-color:#e8f5e9; padding:15px; border-radius:10px; text-align:center; border:1px solid green;">
@@ -525,20 +548,6 @@ elif menu == "🛍️ Pesan Barang":
                             except Exception as e:
                                 st.error(f"Error Sistem: {e}")
 
-    class_tambahan = "naik" if total_duit > 0 else ""
-    st.markdown(f'<a href="#paling-atas" class="back-to-top {class_tambahan}">⬆️</a>', unsafe_allow_html=True)
-
-    if total_duit > 0:
-        with st.container(border=True):
-            st.markdown('<span class="floating-bar-marker"></span>', unsafe_allow_html=True)
-            c_float_1, c_float_2 = st.columns([1.5, 1], vertical_alignment="center")
-            with c_float_1:
-                st.markdown(f"<div style='font-size:14px; font-weight:bold; color:#333;'>Total: {format_rupiah(total_duit)}</div>", unsafe_allow_html=True)
-                st.caption(f"{total_qty} Barang")
-            with c_float_2:
-                if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
-                    show_cart_modal()
-
 # =========================================
 # 3. LACAK PESANAN (UPDATE: REFUND OTOMATIS)
 # =========================================
@@ -595,11 +604,19 @@ elif menu == "🔍 Lacak Pesanan":
                                         supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
                                         refund_nominal += cur.data[0]['harga']*q
                                 
-                                # 2. Generate Kode Voucher Baru (Total Harga Barang)
+                                # HITUNG TOTAL REFUND (Uang Transfer + Voucher yang terpakai)
+                                nominal_potongan_lama = d.get('potongan_voucher', 0)
+                                if nominal_potongan_lama is None: nominal_potongan_lama = 0
+                                
+                                # Total saldo yang harus dikembalikan = (Total Transfer - Kode Unik) + Potongan Voucher Lama
+                                # Atau simpelnya: Harga Barang Asli
+                                total_refund = refund_nominal 
+
+                                # 2. Generate Kode Voucher Baru
                                 kode_baru = generate_kode_voucher()
                                 data_voucher = {
                                     "kode_voucher": kode_baru,
-                                    "nominal": refund_nominal, # Full harga barang masuk ke voucher
+                                    "nominal": total_refund, 
                                     "status": "AKTIF",
                                     "pemilik": d['nama_pemesan']
                                 }
@@ -614,7 +631,7 @@ elif menu == "🔍 Lacak Pesanan":
                                 <div style="background-color:#fff3cd; padding:20px; border-radius:10px; text-align:center; border:2px dashed orange;">
                                     <p>Saldo Anda telah diamankan ke Voucher:</p>
                                     <h1 style="color:#d35400; font-family:monospace; font-size:30px; letter-spacing: 2px;">{kode_baru}</h1>
-                                    <p>Saldo: <b>{format_rupiah(refund_nominal)}</b></p>
+                                    <p>Saldo: <b>{format_rupiah(total_refund)}</b></p>
                                     <small>Simpan/Screenshot kode ini untuk belanja berikutnya!</small>
                                 </div>
                                 """, unsafe_allow_html=True)
@@ -642,3 +659,17 @@ elif menu == "🔍 Lacak Pesanan":
         else:
             st.error("Tidak ditemukan.")
 
+# --- Floating Button Logic (Global) ---
+class_tambahan = "naik" if total_duit > 0 else ""
+st.markdown(f'<a href="#paling-atas" class="back-to-top {class_tambahan}">⬆️</a>', unsafe_allow_html=True)
+
+if total_duit > 0:
+    with st.container(border=True):
+        st.markdown('<span class="floating-bar-marker"></span>', unsafe_allow_html=True)
+        c_float_1, c_float_2 = st.columns([1.5, 1], vertical_alignment="center")
+        with c_float_1:
+            st.markdown(f"<div style='font-size:14px; font-weight:bold; color:#333;'>Total: {format_rupiah(total_duit)}</div>", unsafe_allow_html=True)
+            st.caption(f"{total_qty} Barang")
+        with c_float_2:
+            if st.button("🛒 Lihat Troli", type="primary", use_container_width=True):
+                show_cart_modal()
