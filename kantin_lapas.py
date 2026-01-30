@@ -593,40 +593,123 @@ elif menu == "🛍️ Pesan Barang":
                 show_cart_modal()
 
 # =========================================
-# 3. LACAK PESANAN
+# 3. LACAK PESANAN (KOMPLIT: VOUCHER, RATING, FOTO)
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
+    st.info("💡 Tips: Anda cukup memasukkan **4 Huruf/Angka Terakhir** dari Resi (Contoh: **RK88**) atau Resi Lengkap.")
+    
     resi_in = st.text_input("Masukkan Kode Resi")
     
     if st.button("Cek Status"):
         if resi_in:
-            st.session_state.resi_aktif = resi_in.strip() 
+            st.session_state.resi_aktif = resi_in.strip()
         else:
             st.warning("Mohon isi kode resi.")
 
     if 'resi_aktif' in st.session_state and st.session_state.resi_aktif:
-        res = supabase.table("pesanan").select("*").ilike("no_resi", f"%{st.session_state.resi_aktif}").execute()
+        keyword = st.session_state.resi_aktif
+        res = supabase.table("pesanan").select("*").ilike("no_resi", f"%{keyword}").execute()
+        
         if res.data:
+            # Urutkan berdasarkan ID terbaru
             d = sorted(res.data, key=lambda x: x['id'], reverse=True)[0]
-            st.divider()
-            st.write(f"📦 Resi: `{d['no_resi']}`")
-            st.info(f"Status: {d['status']}")
             
-            if d.get('foto_penerima'):
-                st.image(d['foto_penerima'], width=300, caption="Bukti Terima")
+            st.divider()
+            st.write(f"📦 **Pesanan Ditemukan:** `{d['no_resi']}`")
+            
+            # --- STATUS BAR ---
+            status_color = "blue"
+            if d['status'] == "Selesai": status_color = "green"
+            elif "Dibatalkan" in d['status'] or "Ditolak" in d['status']: status_color = "red"
+            
+            st.markdown(f"""
+            <div style="padding:15px; border-radius:10px; background-color:{'#e8f5e9' if status_color=='green' else '#ffebee' if status_color=='red' else '#e3f2fd'}; border:1px solid {status_color};">
+                <h3 style="margin:0; color:{status_color};">{d['status']}</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.write(f"**Item:** {d['item_pesanan']}")
+            st.caption(f"Pemesan: {d['nama_pemesan']} | Penerima: {d['untuk_siapa']}")
+            
+            # --- FOTO SERAH TERIMA ---
+            foto_url = d.get('foto_penerima')
+            st.write("---")
+            if foto_url:
+                st.success("📸 **Bukti Serah Terima Barang:**")
+                st.image(foto_url, width=300, caption=f"Diterima oleh: {d['untuk_siapa']}")
+            else:
+                if d['status'] == "Selesai":
+                    st.warning("⚠️ Status pesanan 'Selesai', tetapi Admin belum mengunggah foto bukti.")
+                    st.caption("(Kolom 'foto_penerima' kosong di database)")
 
+            # --- LOGIKA TOMBOL BATAL & REFUND KE DATABASE ---
             if d['status'] == "Menunggu Verifikasi":
+                st.info("ℹ️ **Info:** Tombol batalkan pesanan akan muncul otomatis jika 4 jam belum diproses.")
                 try:
-                    waktu_p = datetime.fromisoformat(d['created_at'].replace('Z', '+00:00'))
-                    if (datetime.now(timezone.utc) - waktu_p) >= timedelta(hours=4):
-                        if st.button("❌ Batalkan & Refund"):
-                            kode_v = f"REF-{random.randint(1000, 9999)}"
-                            supabase.table("vouchers").insert({"kode_voucher": kode_v, "saldo": d['total_harga'], "is_active": True}).execute()
-                            supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
-                            st.success(f"Dibatalkan! Kode Voucher: {kode_v}")
-                            st.rerun()
+                    w_str = d.get('created_at')
+                    if not w_str: waktu_pesan = datetime.now(timezone.utc)
+                    else: waktu_pesan = datetime.fromisoformat(w_str.replace('Z', '+00:00'))
+                    
+                    if (datetime.now(timezone.utc) - waktu_pesan) >= timedelta(hours=4):
+                        st.error("Waktu tunggu 4 jam terlewati.")
+                        if st.button("❌ Batalkan & Refund Sekarang"):
+                            try:
+                                refund_total = 0
+                                # 1. Kembalikan Stok
+                                for i_str in d['item_pesanan'].split(", "):
+                                    if "x " in i_str:
+                                        q_str, n = i_str.split("x ", 1); q = int(q_str)
+                                    else:
+                                        q = 1; n = i_str
+                                    cur = supabase.table("barang").select("*").eq("nama_barang", n).execute()
+                                    if cur.data:
+                                        supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
+                                        refund_total += cur.data[0]['harga']*q
+                                
+                                # 2. Update Status Pesanan
+                                supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
+                                
+                                # 3. Generate Voucher & Simpan ke Database (Agar bisa diinput di Tab Pembayaran)
+                                kode_vcr = f"REF-{random.randint(1000, 9999)}"
+                                supabase.table("vouchers").insert({
+                                    "kode_voucher": kode_vcr,
+                                    "saldo": d['total_harga'], # Refund sesuai total yang dibayar user
+                                    "nama_penerima": d['nama_pemesan'],
+                                    "is_active": True
+                                }).execute()
+                                
+                                # 4. Tampilkan Gambar Voucher
+                                v_img = buat_voucher_image(d['nama_pemesan'], d['total_harga'], kode_vcr)
+                                b64_v = image_to_base64(v_img)
+                                
+                                st.success(f"✅ Pesanan Dibatalkan. Kode Voucher Anda: **{kode_vcr}**")
+                                st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
+                                st.download_button("Download Voucher", v_img, f"V_{kode_vcr}.jpg", "image/jpeg")
+                                
+                                del st.session_state.resi_aktif
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gagal memproses refund: {e}")
                 except: pass
+
+            # --- LOGIKA ULASAN (Hanya jika Selesai) ---
+            elif d['status'] == "Selesai":
+                st.subheader("⭐ Berikan Ulasan")
+                if d.get('rating') is None:
+                    with st.form("form_ulasan"):
+                        st.write("Bagaimana kepuasan Anda?")
+                        pil = st.selectbox("Rating", ["5 - Puas", "4 - Baik", "3 - Cukup", "2 - Kurang", "1 - Kecewa"])
+                        kom = st.text_area("Komentar")
+                        if st.form_submit_button("Kirim"):
+                            rate_val = int(pil.split(" - ")[0])
+                            supabase.table("pesanan").update({"rating": rate_val, "ulasan": kom}).eq("id", d['id']).execute()
+                            st.success("Terima kasih!")
+                            st.rerun()
+                else:
+                    st.info("✅ Ulasan sudah terkirim.")
+                    st.write(f"Rating: {'⭐'*d['rating']}")
+                    if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Resi tidak ditemukan.")
 
