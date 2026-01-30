@@ -554,9 +554,8 @@ with tab_checkout:
             if 'kode_unik' not in st.session_state:
                 st.session_state.kode_unik = random.randint(101, 999)
             
-            # Rumus: (Total Barang + Kode Unik) - Saldo Voucher
             total_setelah_voucher = (total_barang + st.session_state.kode_unik) - st.session_state.saldo_voucher
-            total_bayar_final = max(0, total_setelah_voucher) # Tidak boleh minus
+            total_bayar_final = max(0, total_setelah_voucher)
 
             with st.container(border=True):
                 st.write("**Ringkasan Pesanan:**")
@@ -568,7 +567,6 @@ with tab_checkout:
                 
                 st.divider()
                 
-                # --- TAMPILAN TOTAL DENGAN FITUR COPY ---
                 angka_murni = str(total_bayar_final) 
                 tampilkan_total_copy_otomatis(
                     format_rupiah(total_bayar_final), 
@@ -587,9 +585,8 @@ with tab_checkout:
                     untuk = st.text_input("Nama WBP + Bin/Binti", placeholder="Contoh: Ali bin Abu")
                     wa = st.text_input("WhatsApp")
                     
-                    # Jika total bayar 0 karena voucher, bukti transfer opsional
                     if total_bayar_final == 0:
-                        st.info("💡 Saldo voucher mencukupi. Anda tidak perlu transfer, cukup upload foto apa saja atau screenshot voucher ini.")
+                        st.info("💡 Saldo voucher mencukupi. Anda tidak perlu transfer.")
                     
                     bukti = st.file_uploader("Upload Bukti", type=['jpg','png'], key="bukti_fix")
                     
@@ -612,8 +609,7 @@ with tab_checkout:
                                     
                                     data = {
                                         "nama_pemesan": pemesan, "untuk_siapa": untuk, "nomor_wa": wa,
-                                        "item_pesanan": items_str, 
-                                        "total_harga": total_bayar_final,
+                                        "item_pesanan": items_str, "total_harga": total_bayar_final,
                                         "bukti_transfer": url, "status": "Menunggu Verifikasi",
                                         "cara_bayar": bayar, "no_resi": resi,
                                         "created_at": waktu_sekarang_iso
@@ -626,7 +622,7 @@ with tab_checkout:
                                         if curr.data:
                                             supabase.table("barang").update({"stok": curr.data[0]['stok'] - x['qty']}).eq("nama_barang", x['nama']).execute()
 
-                                    # 3. FITUR BARU: HANGUSKAN VOUCHER SETELAH DIPAKAI
+                                    # Hanguskan Voucher
                                     if st.session_state.voucher_id_aktif:
                                         supabase.table("vouchers").update({"is_active": False}).eq("id", st.session_state.voucher_id_aktif).execute()
                                         st.session_state.saldo_voucher = 0
@@ -644,31 +640,27 @@ with tab_checkout:
 # =========================================
 elif menu == "🔍 Lacak Pesanan":
     st.title("Lacak Pesanan")
-    st.info("💡 Tips: Anda cukup memasukkan **4 Huruf/Angka Terakhir** dari Resi (Contoh: **RK88**) atau Resi Lengkap.")
+    st.info("💡 Tips: Masukkan **4 Angka Terakhir** Resi atau Resi Lengkap.")
     
     resi_in = st.text_input("Masukkan Kode Resi")
     
-    # Tombol Cek
     if st.button("Cek Status"):
         if resi_in:
             st.session_state.resi_aktif = resi_in.strip() 
         else:
             st.warning("Mohon isi kode resi.")
 
-    # Logika Pencarian
     if 'resi_aktif' in st.session_state and st.session_state.resi_aktif:
         keyword = st.session_state.resi_aktif
         res = supabase.table("pesanan").select("*").ilike("no_resi", f"%{keyword}").execute()
         
         if res.data:
-            # Ambil data terbaru
             data_found = sorted(res.data, key=lambda x: x['id'], reverse=True)
             d = data_found[0] 
             
             st.divider()
             st.write(f"📦 **Pesanan Ditemukan:** `{d['no_resi']}`")
             
-            # --- STATUS BAR ---
             status_color = "blue"
             if d['status'] == "Selesai": status_color = "green"
             elif "Dibatalkan" in d['status'] or "Ditolak" in d['status']: status_color = "red"
@@ -682,7 +674,6 @@ elif menu == "🔍 Lacak Pesanan":
             st.write(f"**Item:** {d['item_pesanan']}")
             st.caption(f"Pemesan: {d['nama_pemesan']} | Penerima: {d['untuk_siapa']}")
             
-            # --- FOTO SERAH TERIMA ---
             foto_url = d.get('foto_penerima') 
             st.write("---") 
             
@@ -691,11 +682,10 @@ elif menu == "🔍 Lacak Pesanan":
                 st.image(foto_url, width=300, caption=f"Diterima oleh: {d['untuk_siapa']}")
             else:
                 if d['status'] == "Selesai":
-                    st.warning("⚠️ Status pesanan 'Selesai', tetapi Admin belum mengunggah foto bukti.")
+                    st.warning("⚠️ Status pesanan 'Selesai', tetapi Admin belum mengunggah foto.")
 
-            # --- LOGIKA TOMBOL BATAL & GENERATE VOUCHER DIGITAL ---
             if d['status'] == "Menunggu Verifikasi":
-                st.info("ℹ️ **Info:** Tombol batalkan pesanan akan muncul otomatis jika 4 jam belum diproses.")
+                st.info("ℹ️ Tombol batal muncul jika 4 jam belum diproses.")
                 try:
                     waktu_str = d.get('created_at')
                     if not waktu_str: waktu_pesan = datetime.now(timezone.utc)
@@ -706,7 +696,6 @@ elif menu == "🔍 Lacak Pesanan":
                         if st.button("❌ Batalkan & Refund Sekarang"):
                             try:
                                 refund = 0
-                                # Kembalikan Stok
                                 for i_str in d['item_pesanan'].split(", "):
                                     if "x " in i_str: q_str, n = i_str.split("x ", 1); q = int(q_str)
                                     else: q = 1; n = i_str 
@@ -715,13 +704,10 @@ elif menu == "🔍 Lacak Pesanan":
                                         supabase.table("barang").update({"stok": cur.data[0]['stok']+q}).eq("nama_barang", n).execute()
                                         refund += cur.data[0]['harga']*q
                                 
-                                # Update Status Pesanan
                                 supabase.table("pesanan").update({"status": "Dibatalkan"}).eq("id", d['id']).execute()
                                 
-                                # --- FITUR VOUCHER DIGITAL BARU ---
-                                # 1. Buat kode voucher unik
+                                # GENERATE VOUCHER DIGITAL
                                 kode_vcr = f"REF-{random.randint(1000, 9999)}"
-                                # 2. Simpan kode ke tabel 'vouchers' agar bisa diinput di TAB 2
                                 supabase.table("vouchers").insert({
                                     "kode_voucher": kode_vcr,
                                     "saldo": refund,
@@ -729,21 +715,18 @@ elif menu == "🔍 Lacak Pesanan":
                                     "is_active": True
                                 }).execute()
                                 
-                                # 3. Buat Gambar Voucher untuk didownload
                                 vcr_img = buat_voucher_image(d['nama_pemesan'], refund, kode_vcr)
                                 b64_v = image_to_base64(vcr_img)
                                 
-                                st.success(f"✅ Pesanan Dibatalkan. Kode Voucher Refund Anda: **{kode_vcr}**")
+                                st.success(f"✅ Dibatalkan. Kode Voucher: **{kode_vcr}**")
                                 st.markdown(f'<img src="data:image/jpeg;base64,{b64_v}" style="width:100%; border:2px dashed blue;">', unsafe_allow_html=True)
                                 st.download_button("📥 Download Voucher", vcr_img, f"V_{kode_vcr}.jpg", "image/jpeg")
                                 
                                 del st.session_state.resi_aktif
                                 st.rerun()
-                            except Exception as e: 
-                                st.error(f"Gagal membatalkan: {e}")
+                            except Exception as e: st.error(f"Gagal: {e}")
                 except: pass
 
-            # --- LOGIKA ULASAN ---
             elif d['status'] == "Selesai":
                 st.subheader("⭐ Berikan Ulasan")
                 if d.get('rating') is None:
@@ -758,7 +741,6 @@ elif menu == "🔍 Lacak Pesanan":
                 else:
                     st.info("✅ Ulasan terkirim.")
                     st.write(f"Rating: {'⭐'*d['rating']}")
-                    if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Resi tidak ditemukan.")
 
