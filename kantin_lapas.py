@@ -541,11 +541,11 @@ elif menu == "🛍️ Pesan Barang":
                     tampilkan_total_copy_otomatis(format_rupiah(total_bayar_final), str(total_bayar_final), st.session_state.kode_unik)
                     
                     # Cari baris selectbox metode bayar, ganti jadi ini:
-if total_bayar_final == 0:
-    bayar = "🎫 Voucher (Lunas)"
-    st.success("✅ Saldo Voucher mencukupi! Anda tidak perlu melakukan transfer tambahan.")
-else:
-    bayar = st.selectbox("Metode Bayar Sisa Tagihan", ["Transfer Bank", "E-Wallet"])
+                    if total_bayar_final == 0:
+                        bayar = "🎫 Voucher (Lunas)"
+                        st.success("✅ Saldo Voucher mencukupi! Anda tidak perlu melakukan transfer tambahan.")
+                    else:
+                        bayar = st.selectbox("Metode Bayar Sisa Tagihan", ["Transfer Bank", "E-Wallet"])
                     
                     with st.form("checkout"):
                         pemesan = st.text_input("Nama Pengirim")
@@ -629,6 +629,7 @@ elif menu == "🔍 Lacak Pesanan":
                 except: pass
         else:
             st.error("Resi tidak ditemukan.")
+
 
 
 
