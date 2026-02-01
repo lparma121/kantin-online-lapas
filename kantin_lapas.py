@@ -323,11 +323,11 @@ def buat_voucher_image(nama, nominal, resi_asal):
 if 'keranjang' not in st.session_state: st.session_state.keranjang = []
 if 'nota_sukses' not in st.session_state: st.session_state.nota_sukses = None
 # Init Kode Unik jika belum ada
-if 'kode_unik' not in st.session_state: st.session_state.kode_unik = random.randint(101, 299)
+if 'kode_unik' not in st.session_state: st.session_state.kode_unik = random.randint(10, 299)
 
 def reset_keranjang(): 
     st.session_state.keranjang = []
-    st.session_state.kode_unik = random.randint(101, 299) # Reset kode unik juga
+    st.session_state.kode_unik = random.randint(10, 299) # Reset kode unik juga
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -712,6 +712,7 @@ elif menu == "🔍 Lacak Pesanan":
                     if d.get('ulasan'): st.write(f"Komentar: {d['ulasan']}")
         else:
             st.error("Resi tidak ditemukan.")
+
 
 
 
