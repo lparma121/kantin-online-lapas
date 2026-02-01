@@ -3,6 +3,8 @@ from supabase import create_client
 import time
 from PIL import Image
 import io
+from fpdf import FPDF  # <--- PERLU INSTALL: pip install fpdf
+from datetime import datetime
 
 # ==============================================================================
 # 1. KONFIGURASI & KONEKSI (JALAN PERTAMA KALI)
@@ -100,6 +102,60 @@ def upload_ke_supabase(file_obj, folder, nama_unik):
 def format_rupiah(angka):
     return f"Rp {angka:,.0f}".replace(",", ".")
 
+# --- FUNGSI CETAK NOTA (PDF A6) ---
+def buat_nota_pdf(p):
+    # Ukuran A6 (105 x 148 mm) cocok untuk nota
+    pdf = FPDF(format='A6', unit='mm')
+    pdf.set_auto_page_break(auto=True, margin=5)
+    pdf.add_page()
+    
+    # 1. Header
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 8, "KANTIN LAPAS", ln=True, align='C')
+    pdf.set_font("Arial", '', 8)
+    pdf.cell(0, 5, "Lapas Kelas IIB Arga Makmur", ln=True, align='C')
+    pdf.line(5, 20, 100, 20)
+    pdf.ln(5)
+    
+    # 2. Info Pesanan
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(0, 5, f"RESI: {p.get('no_resi', '-')}", ln=True, align='C')
+    pdf.ln(2)
+    
+    pdf.set_font("Arial", size=9)
+    pdf.cell(25, 5, "Tanggal", 0)
+    # Ambil tanggal saja dari timestamp
+    tgl = p.get('created_at', '-')[:10]
+    pdf.cell(0, 5, f": {tgl}", ln=True)
+    
+    pdf.cell(25, 5, "Pengirim", 0)
+    pdf.cell(0, 5, f": {p['nama_pemesan'][:20]}", ln=True) # Potong nama jika panjang
+    
+    pdf.cell(25, 5, "Penerima", 0)
+    pdf.cell(0, 5, f": {p['untuk_siapa'][:20]}", ln=True)
+    
+    pdf.ln(3)
+    pdf.line(5, pdf.get_y(), 100, pdf.get_y())
+    pdf.ln(3)
+    
+    # 3. Item Pesanan
+    pdf.set_font("Arial", 'B', 9)
+    pdf.cell(0, 5, "DETAIL PESANAN:", ln=True)
+    pdf.set_font("Arial", size=9)
+    
+    # Karena item_pesanan bentuknya string text panjang, kita multi_cell
+    items = p['item_pesanan'].replace('\n', ', ') # Rapikan dikit
+    pdf.multi_cell(0, 5, items)
+    
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 8, "LUNAS", ln=True, align='C', border=1)
+    
+    pdf.set_font("Arial", 'I', 7)
+    pdf.cell(0, 5, "*Simpan struk ini sebagai bukti serah terima", ln=True, align='C')
+
+    return pdf.output(dest='S').encode('latin-1')
+
 # ==============================================================================
 # HALAMAN 1: MANAJEMEN MENU (Edit & Tambah Barang)
 # ==============================================================================
@@ -167,7 +223,7 @@ if menu_admin == "📦 Manajemen Menu":
                 nama_baru = st.text_input("Nama Produk")
                 harga_baru = st.number_input("Harga (Rp)", min_value=0, step=500, value=5000)
             with c2:
-                stok_awal = st.number_input("Stok Awal", min_value=1, value=10)
+                st.number_input("Stok Awal", min_value=1, value=10, key="stok_awal_input")
                 img_file = st.file_uploader("Upload Foto", type=['png', 'jpg', 'jpeg'])
                 img_url_text = st.text_input("Atau Link URL")
             
@@ -183,9 +239,12 @@ if menu_admin == "📦 Manajemen Menu":
                         elif img_url_text:
                             final_url = img_url_text
                         
+                        # Ambil stok dari session state atau input (Streamlit quirk fix)
+                        stok_fix = st.session_state.get("stok_awal_input", 10)
+
                         new_data = {
                             "nama_barang": nama_baru, 
-                            "stok": stok_awal, 
+                            "stok": stok_fix, 
                             "harga": harga_baru, 
                             "gambar_url": final_url
                         }
@@ -243,8 +302,10 @@ elif menu_admin == "📋 Daftar Pesanan":
                         st.image(p['bukti_transfer'], caption="Bukti TF", width=150)
                     else:
                         st.error("Belum ada bukti TF")
+                    
+                    # LINK NOTA LAMA (JIKA ADA URL EXTERNAL)
                     if p.get('nota_url'):
-                        st.link_button("🧾 Nota", p['nota_url'])
+                        st.link_button("🧾 Nota Lama", p['nota_url'])
 
                 with cols[1]:
                     st.write(f"**Pengirim:** {p['nama_pemesan']}")
@@ -255,6 +316,20 @@ elif menu_admin == "📋 Daftar Pesanan":
                         st.error(f"Status: {p['status']}")
 
                 with cols[2]:
+                    # --- TOMBOL CETAK NOTA (BARU) ---
+                    # Hanya muncul jika Pesanan Valid / Diproses / Selesai
+                    if p['status'] in ["Pembayaran Valid (Diproses)", "Selesai"] or status_tab == "Proses":
+                        pdf_data = buat_nota_pdf(p)
+                        st.download_button(
+                            label="🖨️ CETAK NOTA (PDF)",
+                            data=pdf_data,
+                            file_name=f"Nota_{p['no_resi']}.pdf",
+                            mime="application/pdf",
+                            key=f"print_{p['id']}",
+                            type="secondary"
+                        )
+                        st.write("---")
+
                     if "Ditolak" in p.get('status', ''):
                         st.info("ℹ️ Data ini telah diarsipkan.")
                     else:
@@ -294,8 +369,6 @@ elif menu_admin == "📋 Daftar Pesanan":
                                             st.success("✅ Pesanan Selesai!")
                                             st.info("Klik tombol di bawah untuk lapor ke keluarga:")
                                             st.link_button("📲 Kabari via WA", link_wa)
-                                            
-                                            # TIDAK ADA RERUN DISINI AGAR TOMBOL WA TETAP MUNCUL
                                         else:
                                             st.error("Gagal upload foto.")
                                     else:
@@ -365,6 +438,10 @@ elif menu_admin == "📋 Daftar Pesanan":
                 for p in res.data:
                     with st.expander(f"✅ {p['no_resi']} - {p['untuk_siapa']}"):
                         st.write(f"Item: {p['item_pesanan']}")
+                        # TOMBOL CETAK NOTA JUGA MUNCUL DISINI (BUAT REPRINT)
+                        pdf_data = buat_nota_pdf(p)
+                        st.download_button("🖨️ Reprint Nota", pdf_data, f"Nota_{p['no_resi']}.pdf", "application/pdf", key=f"reprint_{p['id']}")
+                        
                         if p.get('foto_penerima'):
                             st.image(p['foto_penerima'], caption="Bukti Serah Terima", width=200)
                         else:
