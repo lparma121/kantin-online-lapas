@@ -98,7 +98,7 @@ def buat_nota_pdf(p):
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(0, 8, "KANTIN LAPAS", ln=True, align='C')
     pdf.set_font("Arial", '', 8)
-    pdf.cell(0, 5, "Lapas Kelas IIB Arga Makmur", ln=True, align='C')
+    pdf.cell(0, 10, "Lapas Kelas IIB Arga Makmur", ln=True, align='C')
     pdf.line(5, 20, 100, 20)
     pdf.ln(5)
     
