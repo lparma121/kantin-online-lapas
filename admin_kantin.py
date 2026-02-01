@@ -3,7 +3,7 @@ from supabase import create_client
 import time
 from PIL import Image
 import io
-from fpdf import FPDF  # <--- PERLU INSTALL: pip install fpdf
+from fpdf import FPDF
 from datetime import datetime
 
 # ==============================================================================
@@ -102,10 +102,12 @@ def upload_ke_supabase(file_obj, folder, nama_unik):
 def format_rupiah(angka):
     return f"Rp {angka:,.0f}".replace(",", ".")
 
-# --- FUNGSI CETAK NOTA (PDF A6) ---
+# --- FUNGSI CETAK NOTA (PDF A6 - FIX ERROR) ---
 def buat_nota_pdf(p):
-    # Ukuran A6 (105 x 148 mm) cocok untuk nota
-    pdf = FPDF(format='A6', unit='mm')
+    # Ukuran A6 = 105 x 148 mm
+    # Kita pakai angka langsung (105, 148) agar kompatibel dengan semua versi FPDF
+    pdf = FPDF(format=(105, 148), unit='mm')
+    
     pdf.set_auto_page_break(auto=True, margin=5)
     pdf.add_page()
     
@@ -303,7 +305,7 @@ elif menu_admin == "📋 Daftar Pesanan":
                     else:
                         st.error("Belum ada bukti TF")
                     
-                    # LINK NOTA LAMA (JIKA ADA URL EXTERNAL)
+                    # LINK NOTA LAMA
                     if p.get('nota_url'):
                         st.link_button("🧾 Nota Lama", p['nota_url'])
 
